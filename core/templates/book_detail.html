@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ book.title }}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark p-3">
+        <div class="container">
+            <a class="navbar-brand" href="/">Sosyal Kütüphane</a>
+            <div class="d-flex">
+                {% if user.is_authenticated %}
+                    <a href="{% url 'profile' user.username %}" class="btn btn-outline-light btn-sm me-2">Profilim</a>
+                    <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">Çıkış</a>
+                {% else %}
+                    <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm">Giriş</a>
+                {% endif %}
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5 mb-5">
+        <div class="row">
+            <div class="col-md-4 text-center">
+                {% if book.cover_url %}
+                <img src="{{ book.cover_url }}" class="img-fluid shadow-lg rounded" style="max-height: 500px;">
+                {% else %}
+                <div class="bg-secondary text-white p-5 rounded">Kapak Yok</div>
+                {% endif %}
+                
+                <div class="mt-3">
+                    <a href="{{ book.preview_link }}" target="_blank" class="btn btn-outline-primary w-100">
+                        <i class="fas fa-book-reader"></i> Google'da Önizle
+                    </a>
+                </div>
+            </div>
+
+            <div class="col-md-8">
+                <h1 class="fw-bold">{{ book.title }}</h1>
+                <h4 class="text-muted">
+                    <i class="fas fa-pen-nib"></i>
+                    {% for author in book.authors %} {{ author }}{% if not forloop.last %}, {% endif %} {% endfor %}
+                </h4>
+                
+                <div class="row mt-4 p-3 bg-white shadow-sm rounded border">
+                    <div class="col-md-3 text-center border-end">
+                        <strong class="d-block text-secondary small">SAYFA</strong>
+                        <span class="fs-5 fw-bold">{{ book.page_count|default:"?" }}</span>
+                    </div>
+                    <div class="col-md-3 text-center border-end">
+                        <strong class="d-block text-secondary small">YIL</strong>
+                        <span class="fs-5 fw-bold">{{ book.published_date|slice:":4" }}</span>
+                    </div>
+                    <div class="col-md-3 text-center border-end">
+                        <strong class="d-block text-secondary small">DİL</strong>
+                        <span class="fs-5 fw-bold text-uppercase">{{ book.language }}</span>
+                    </div>
+                    <div class="col-md-3 text-center">
+                        <strong class="d-block text-secondary small">YAYINEVİ</strong>
+                        <span class="small fw-bold">{{ book.publisher|default:"-" }}</span>
+                    </div>
+                </div>
+
+                <div class="mt-3">
+                    {% for cat in book.categories %}
+                        <span class="badge bg-warning text-dark">{{ cat }}</span>
+                    {% endfor %}
+                </div>
+
+                <h5 class="mt-4 border-bottom pb-2">Kitap Özeti</h5>
+                <p class="text-secondary" style="line-height: 1.7;">{{ book.description|safe }}</p>
+
+                {% if user.is_authenticated %}
+                <div class="card bg-white border-0 shadow-sm mt-4 p-3">
+                    <h6 class="mb-3 text-muted"><i class="fas fa-plus-circle"></i> Kütüphanene Ekle</h6>
+                    <div class="d-flex gap-2">
+                        <button class="btn btn-success" onclick="interactBook('add_to_list', 'read')">
+                            <i class="fas fa-check"></i> Okudum
+                        </button>
+                        <button class="btn btn-primary" onclick="interactBook('add_to_list', 'readlist')">
+                            <i class="fas fa-bookmark"></i> Okunacak
+                        </button>
+                    </div>
+                    <div id="statusMessage" class="mt-2"></div>
+                </div>
+                {% else %}
+                <div class="alert alert-warning mt-4">
+                    Kitabı listene eklemek için <a href="{% url 'login' %}">Giriş Yap</a>.
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+
+        async function interactBook(action, listType) {
+            const statusDiv = document.getElementById('statusMessage');
+            statusDiv.innerHTML = '<span class="text-info">İşleniyor...</span>';
+
+            // Yazar listesini diziye çevirme (Django template string veriyor)
+            // Burada basitçe gelen stringi alıyoruz
+            
+            const bookData = {
+                google_id: "{{ book.id }}",
+                title: "{{ book.title }}",
+                // Yazarları tek string olarak alıyoruz
+                authors: `{% for author in book.authors %}{{ author }}{% if not forloop.last %}, {% endif %}{% endfor %}`,
+                description: `{{ book.description|escapejs }}`,
+                cover_path: "{{ book.cover_url }}", 
+                page_count: "{{ book.page_count|default:0 }}"
+            };
+
+            const csrftoken = getCookie('csrftoken');
+
+            try {
+                const response = await fetch('/api/interact/', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrftoken },
+                    body: JSON.stringify({
+                        action: action,
+                        list_type: listType,
+                        book_data: bookData
+                    })
+                });
+
+                const data = await response.json();
+                if (response.ok) {
+                    if (data.status === 'added') {
+                        statusDiv.innerHTML = `<span class="text-success fw-bold"><i class="fas fa-check"></i> ${data.message}</span>`;
+                    } else {
+                        statusDiv.innerHTML = `<span class="text-warning"><i class="fas fa-info-circle"></i> ${data.message}</span>`;
+                    }
+                } else {
+                    statusDiv.innerHTML = `<span class="text-danger">Hata: ${data.error}</span>`;
+                }
+            } catch (error) {
+                console.error(error);
+                statusDiv.innerHTML = '<span class="text-danger">Sunucu hatası.</span>';
+            }
+        }
+    </script>
+</body>
+</html>

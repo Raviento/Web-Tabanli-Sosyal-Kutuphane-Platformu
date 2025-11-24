@@ -1,0 +1,19 @@
+# Python ve Django Gereksizleri
+__pycache__/
+*.py[cod]
+*$py.class
+db.sqlite3
+
+# Güvenlik (Şifrelerin olduğu dosya ASLA gitmemeli)
+.env
+
+# Medya Dosyaları (Kullanıcıların yüklediği resimler)
+media/
+core/media/
+
+# VS Code Ayarları
+.vscode/
+
+# İşletim Sistemi Dosyaları
+.DS_Store
+Thumbs.db
