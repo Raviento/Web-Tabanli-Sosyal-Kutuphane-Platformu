@@ -1,95 +1,614 @@
-<!DOCTYPE html>
-<html lang="tr">
-<head>
-    <meta charset="UTF-8">
-    <title>{{ profile_user.username }} - Profil</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        .profile-header { background: linear-gradient(to right, #1a2980, #26d0ce); color: white; padding: 3rem 0; }
-        .avatar-img { width: 150px; height: 150px; object-fit: cover; border: 5px solid white; }
-        .movie-poster { height: 250px; object-fit: cover; transition: transform 0.2s; }
-        .movie-poster:hover { transform: scale(1.05); }
-    </style>
-</head>
-<body class="bg-light">
+{% extends 'base.html' %}
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <div class="container">
-            <a class="navbar-brand" href="/">Sosyal Kütüphane</a>
-            <div class="d-flex">
-                <a href="{% url 'home' %}" class="btn btn-outline-light btn-sm me-2">Ana Sayfa</a>
-                <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">Çıkış</a>
-            </div>
-        </div>
-    </nav>
+{% block title %}{{ profile_user.username }} - Profil{% endblock %}
 
-    <div class="profile-header text-center">
-        <div class="container">
+{% block content %}
+<style>
+    /* Profile Specific Styles */
+    .profile-header-section {
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 2rem;
+        margin-bottom: 2rem;
+    }
+    .profile-avatar-large {
+        width: 120px;
+        height: 120px;
+        object-fit: cover;
+        border: 2px solid var(--text-secondary);
+    }
+    .stat-box {
+        text-align: center;
+        padding: 0 15px;
+        border-right: 1px solid var(--border-color);
+        cursor: pointer;
+        transition: color 0.2s;
+    }
+    .stat-box:hover .stat-value { color: var(--accent-color); }
+    .stat-box:last-child { border-right: none; }
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: white;
+        display: block;
+    }
+    .stat-label {
+        font-size: 0.8rem;
+        color: var(--text-secondary);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+    .section-title {
+        font-size: 0.9rem;
+        text-transform: uppercase;
+        color: var(--text-secondary);
+        border-bottom: 1px solid var(--border-color);
+        padding-bottom: 5px;
+        margin-bottom: 15px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .fav-film-poster {
+        width: 100%;
+        border-radius: 4px;
+        border: 1px solid transparent;
+        transition: border-color 0.2s;
+    }
+    .fav-film-poster:hover {
+        border-color: var(--accent-color);
+    }
+    .activity-item {
+        border-bottom: 1px solid var(--border-color);
+        padding: 10px 0;
+    }
+    .activity-item:last-child { border-bottom: none; }
+    .poster-sm {
+        width: 50px;
+        border-radius: 2px;
+    }
+    /* Modal Dark Theme Overrides */
+    .modal-content {
+        background-color: var(--bg-card);
+        color: var(--text-primary);
+        border: 1px solid var(--border-color);
+    }
+    .modal-header, .modal-footer {
+        border-color: var(--border-color);
+    }
+    .btn-close {
+        filter: invert(1) grayscale(100%) brightness(200%);
+    }
+</style>
+
+<div class="container mt-4">
+    <!-- Header Section -->
+    <div class="row profile-header-section align-items-end">
+        <div class="col-md-2 text-center text-md-start">
             {% if profile.avatar %}
-                <img src="{{ profile.avatar.url }}" class="rounded-circle avatar-img shadow" alt="Avatar">
+                <img src="{{ profile.avatar.url }}" class="rounded-circle profile-avatar-large" alt="{{ profile_user.username }}">
             {% else %}
-                <img src="https://via.placeholder.com/150" class="rounded-circle avatar-img shadow" alt="Avatar">
+                <img src="/media/avatars/usericon.png" class="rounded-circle profile-avatar-large" alt="{{ profile_user.username }}">
+            {% endif %}
+        </div>
+        <div class="col-md-6">
+            <h2 class="mb-1 text-white">{{ profile_user.username }}</h2>
+            {% if profile.bio %}
+                <p class="text-muted mb-3">{{ profile.bio }}</p>
+            {% else %}
+                <p class="text-muted mb-3 fst-italic">Henüz biyografi yok.</p>
             {% endif %}
             
-            <h2 class="mt-3">{{ profile_user.username }}</h2>
-            <p class="lead">{{ profile.bio|default:"Henüz bir biyografi yok." }}</p>
-            
-            {% if is_owner %}
-                <button class="btn btn-light btn-sm mt-2"><a href="{% url 'edit_profile' %}" class="btn btn-light btn-sm mt-2"><i class="fas fa-edit"></i> Profili Düzenle</a></button>
-            {% endif %}
+            <div class="d-flex gap-2 mb-3">
+                {% if is_owner %}
+                    <a href="{% url 'edit_profile' %}" class="btn btn-sm btn-secondary">Profili Düzenle</a>
+                    <button type="button" class="btn btn-sm btn-outline-light" data-bs-toggle="modal" data-bs-target="#createListModal">
+                        <i class="fas fa-plus"></i> Liste Oluştur
+                    </button>
+                {% elif user.is_authenticated %}
+                    <a href="{% url 'follow_user' profile_user.username %}" class="btn btn-sm {% if is_following %}btn-danger{% else %}btn-success{% endif %}">
+                        {% if is_following %}Takipten Çık{% else %}Takip Et{% endif %}
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="d-flex justify-content-end">
+                <div class="stat-box">
+                    <span class="stat-value">{{ stats.films_count }}</span>
+                    <span class="stat-label">Film</span>
+                </div>
+                <div class="stat-box">
+                    <span class="stat-value">{{ stats.books_count }}</span>
+                    <span class="stat-label">Kitap</span>
+                </div>
+                <div class="stat-box" data-bs-toggle="modal" data-bs-target="#followersModal">
+                    <span class="stat-value">{{ followers_count }}</span>
+                    <span class="stat-label">Takipçi</span>
+                </div>
+                <div class="stat-box" data-bs-toggle="modal" data-bs-target="#followingModal">
+                    <span class="stat-value">{{ following_count }}</span>
+                    <span class="stat-label">Takip</span>
+                </div>
+            </div>
         </div>
     </div>
 
-    <div class="container mt-5">
-        <ul class="nav nav-tabs" id="myTab" role="tablist">
-            <li class="nav-item">
-                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#watched">
-                    <i class="fas fa-check-circle text-success"></i> İzlediklerim
-                </button>
-            </li>
-            <li class="nav-item">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#watchlist">
-                    <i class="fas fa-bookmark text-primary"></i> İzlenecekler
-                </button>
-            </li>
-        </ul>
+    <div class="row">
+        <!-- Main Column -->
+        <div class="col-md-12">
+            <!-- Navigation Tabs -->
+            <ul class="nav nav-tabs mb-4 border-secondary" id="profileTabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active text-white bg-transparent border-0 border-bottom border-3 border-success" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Genel Bakış</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link text-secondary bg-transparent border-0" id="watched-tab" data-bs-toggle="tab" data-bs-target="#watched" type="button" role="tab">İzlediklerim</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link text-secondary bg-transparent border-0" id="watchlist-tab" data-bs-toggle="tab" data-bs-target="#watchlist" type="button" role="tab">İzlenecekler</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link text-secondary bg-transparent border-0" id="read-tab" data-bs-toggle="tab" data-bs-target="#read" type="button" role="tab">Okuduklarım</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link text-secondary bg-transparent border-0" id="readlist-tab" data-bs-toggle="tab" data-bs-target="#readlist" type="button" role="tab">Okunacaklar</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link text-secondary bg-transparent border-0" id="lists-tab" data-bs-toggle="tab" data-bs-target="#lists" type="button" role="tab">Listeler</button>
+                </li>
+            </ul>
 
-        <div class="tab-content p-4 bg-white border border-top-0 shadow-sm" id="myTabContent">
-            
-            <div class="tab-pane fade show active" id="watched">
-                <div class="row">
-                    {% for movie in watched_movies %}
-                        <div class="col-md-2 mb-3">
-                            <a href="{% url 'movie_detail' movie.tmdb_id %}">
-                                <img src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" class="img-fluid rounded movie-poster" alt="{{ movie.title }}">
-                            </a>
-                            <p class="text-center small mt-1 fw-bold">{{ movie.title }}</p>
+            <div class="tab-content" id="profileTabsContent">
+                <!-- OVERVIEW TAB -->
+                <div class="tab-pane fade show active" id="overview" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-8">
+                            <!-- Favorite Films -->
+                            {% if favorite_films %}
+                            <div class="mb-5">
+                                <div class="section-title">
+                                    <span>Favori Filmler</span>
+                                </div>
+                                <div class="row g-2">
+                                    {% for activity in favorite_films %}
+                                        <div class="col-3">
+                                            <a href="{% url 'movie_detail' activity.movie.tmdb_id %}">
+                                                {% if activity.movie.poster_path %}
+                                                    <img src="https://image.tmdb.org/t/p/w500{{ activity.movie.poster_path }}" class="fav-film-poster" alt="{{ activity.movie.title }}">
+                                                {% else %}
+                                                    <div class="bg-secondary text-white d-flex align-items-center justify-content-center rounded" style="height: 150px;">Resim Yok</div>
+                                                {% endif %}
+                                            </a>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <!-- Recent Activity -->
+                            <div class="mb-4">
+                                <div class="section-title">
+                                    <span>Son Aktiviteler</span>
+                                </div>
+                                <div class="bg-card rounded p-3">
+                                    {% for item in recent_activities %}
+                                        <div class="activity-item d-flex gap-3">
+                                            {% if item.activity.movie %}
+                                                <a href="{% url 'movie_detail' item.activity.movie.tmdb_id %}">
+                                                    <img src="https://image.tmdb.org/t/p/w200{{ item.activity.movie.poster_path }}" class="poster-sm" alt="">
+                                                </a>
+                                            {% elif item.activity.book %}
+                                                <a href="{% url 'book_detail' item.activity.book.google_id %}">
+                                                    <img src="{{ item.activity.book.cover_path }}" class="poster-sm" alt="">
+                                                </a>
+                                            {% endif %}
+                                            
+                                            <div class="flex-grow-1">
+                                                <div class="d-flex justify-content-between">
+                                                    <small class="text-muted">
+                                                        {% if item.activity.movie %}
+                                                            <span class="text-white fw-bold">{{ item.activity.movie.title }}</span>
+                                                            {% if item.activity.action_type == 'COMMENTED' %}filmi hakkında{% else %}filmini{% endif %}
+                                                        {% else %}
+                                                            <span class="text-white fw-bold">{{ item.activity.book.title }}</span>
+                                                            {% if item.activity.action_type == 'COMMENTED' %}kitabı hakkında{% else %}kitabını{% endif %}
+                                                        {% endif %}
+                                                        
+                                                        {% if item.activity.action_type == 'RATED' %}
+                                                            puanladı
+                                                        {% elif item.activity.action_type == 'REVIEWED' %}
+                                                            inceledi
+                                                        {% elif item.activity.action_type == 'COMMENTED' %}
+                                                            {% if item.activity.original_activity.user %}
+                                                                <a href="{% url 'profile' item.activity.original_activity.user.username %}" class="text-decoration-none text-info">{{ item.activity.original_activity.user.username }}</a> kullanıcısının
+                                                            {% endif %}
+                                                            {% if item.activity.original_activity.action_type == 'REVIEWED' %}
+                                                                incelemesine yorum yaptı
+                                                            {% elif item.activity.original_activity.action_type == 'RATED' %}
+                                                                puanına yorum yaptı
+                                                            {% else %}
+                                                                gönderisine yorum yaptı
+                                                            {% endif %}
+                                                        {% elif item.activity.action_type == 'ADDED_LIST' %}
+                                                            {% if item.activity.related_list %}
+                                                                {% if item.activity.related_list.list_type == 'watched' %}
+                                                                    izlediklerine ekledi
+                                                                {% elif item.activity.related_list.list_type == 'watchlist' %}
+                                                                    izleneceklerine ekledi
+                                                                {% elif item.activity.related_list.list_type == 'read' %}
+                                                                    okuduklarına ekledi
+                                                                {% elif item.activity.related_list.list_type == 'readlist' %}
+                                                                    okunacaklarına ekledi
+                                                                {% else %}
+                                                                    <span class="text-info">{{ item.activity.related_list.name }}</span> listesine ekledi
+                                                                {% endif %}
+                                                            {% else %}
+                                                                listesine ekledi
+                                                            {% endif %}
+                                                        {% endif %}
+                                                    </small>
+                                                    <small class="text-muted">{{ item.activity.created_at|date:"d M Y" }}</small>
+                                                </div>
+                                                
+                                                {% if item.score %}
+                                                    <div class="text-warning small my-1">
+                                                        <i class="fas fa-star"></i> {{ item.score }}/10
+                                                    </div>
+                                                {% endif %}
+                                                
+                                                {% if item.activity.related_review %}
+                                                    <div class="mt-2 p-2 rounded" style="background-color: rgba(255,255,255,0.05);">
+                                                        <p class="mb-0 small text-light fst-italic">
+                                                            <i class="fas fa-quote-left text-muted me-1"></i>
+                                                            {{ item.activity.related_review.text }}
+                                                        </p>
+                                                    </div>
+                                                {% endif %}
+
+                                                {% if item.activity.related_comment %}
+                                                    <div class="mt-2 p-2 rounded" style="background-color: rgba(255,255,255,0.05);">
+                                                        <p class="mb-0 small text-light fst-italic">
+                                                            <i class="fas fa-comment text-muted me-1"></i>
+                                                            {{ item.activity.related_comment.text }}
+                                                        </p>
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </div>
+                                    {% empty %}
+                                        <p class="text-muted text-center my-3">Henüz bir aktivite yok.</p>
+                                    {% endfor %}
+                                </div>
+                            </div>
                         </div>
-                    {% empty %}
-                        <p class="text-muted">Henüz izlenen bir film yok.</p>
-                    {% endfor %}
+
+                        <!-- Sidebar (Overview) -->
+                        <div class="col-md-4">
+                            <!-- Watchlist Preview -->
+                            <div class="mb-4">
+                                <div class="section-title">
+                                    <span>İzlenecekler</span>
+                                    <span class="text-muted small">{{ watchlist_movies|length }}</span>
+                                </div>
+                                <div class="row g-1">
+                                    {% for movie in watchlist_movies|slice:":4" %}
+                                        <div class="col-3">
+                                            <a href="{% url 'movie_detail' movie.tmdb_id %}">
+                                                <img src="https://image.tmdb.org/t/p/w200{{ movie.poster_path }}" class="img-fluid rounded" alt="">
+                                            </a>
+                                        </div>
+                                    {% empty %}
+                                        <div class="col-12 text-muted small">Liste boş.</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+
+                            <!-- Readlist Preview -->
+                            <div class="mb-4">
+                                <div class="section-title">
+                                    <span>Okunacaklar</span>
+                                    <span class="text-muted small">{{ readlist_books|length }}</span>
+                                </div>
+                                <div class="row g-1">
+                                    {% for book in readlist_books|slice:":4" %}
+                                        <div class="col-3">
+                                            <a href="{% url 'book_detail' book.google_id %}">
+                                                <img src="{{ book.cover_path }}" class="img-fluid rounded" alt="">
+                                            </a>
+                                        </div>
+                                    {% empty %}
+                                        <div class="col-12 text-muted small">Liste boş.</div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <!-- Lists Preview -->
+                             <div class="mb-4">
+                                <div class="section-title">
+                                    <span>Listeler</span>
+                                </div>
+                                <ul class="list-unstyled">
+                                    {% for list in custom_lists|slice:":5" %}
+                                        <li class="mb-2">
+                                            <a href="{% url 'list_detail' list.id %}" class="text-decoration-none text-white d-flex align-items-center">
+                                                <i class="fas fa-list text-muted me-2"></i> 
+                                                <span>{{ list.name }}</span>
+                                            </a>
+                                        </li>
+                                    {% empty %}
+                                        <li class="text-muted small">Liste yok.</li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- WATCHED TAB -->
+                <div class="tab-pane fade" id="watched" role="tabpanel">
+                    <div class="row">
+                        {% for movie in watched_movies %}
+                            <div class="col-md-2 col-4 mb-3">
+                                <a href="{% url 'movie_detail' movie.tmdb_id %}">
+                                    {% if movie.poster_path %}
+                                        <img src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" class="img-fluid rounded movie-poster" alt="{{ movie.title }}">
+                                    {% else %}
+                                        <div class="bg-secondary text-white d-flex align-items-center justify-content-center rounded" style="height: 250px;">Resim Yok</div>
+                                    {% endif %}
+                                </a>
+                                {% if is_owner %}
+                                <button class="btn btn-danger btn-sm w-100 py-0 mt-1" onclick="removeFromList('watched', 'movie', '{{ movie.id }}')">Çıkar</button>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <p class="text-muted">Henüz izlenen bir film yok.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- WATCHLIST TAB -->
+                <div class="tab-pane fade" id="watchlist" role="tabpanel">
+                    <div class="row">
+                        {% for movie in watchlist_movies %}
+                            <div class="col-md-2 col-4 mb-3">
+                                <a href="{% url 'movie_detail' movie.tmdb_id %}">
+                                    {% if movie.poster_path %}
+                                        <img src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" class="img-fluid rounded movie-poster" alt="{{ movie.title }}">
+                                    {% else %}
+                                        <div class="bg-secondary text-white d-flex align-items-center justify-content-center rounded" style="height: 250px;">Resim Yok</div>
+                                    {% endif %}
+                                </a>
+                                {% if is_owner %}
+                                <button class="btn btn-danger btn-sm w-100 py-0 mt-1" onclick="removeFromList('watchlist', 'movie', '{{ movie.id }}')">Çıkar</button>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <p class="text-muted">İzlenecek listeniz boş.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- READ TAB -->
+                <div class="tab-pane fade" id="read" role="tabpanel">
+                    <div class="row">
+                        {% for book in read_books %}
+                            <div class="col-md-2 col-4 mb-3">
+                                <a href="{% url 'book_detail' book.google_id %}">
+                                    {% if book.cover_path %}
+                                        <img src="{{ book.cover_path }}" class="img-fluid rounded movie-poster" alt="{{ book.title }}">
+                                    {% else %}
+                                        <div class="bg-secondary text-white d-flex align-items-center justify-content-center rounded" style="height: 250px;">Kapak Yok</div>
+                                    {% endif %}
+                                </a>
+                                {% if is_owner %}
+                                <button class="btn btn-danger btn-sm w-100 py-0 mt-1" onclick="removeFromList('read', 'book', '{{ book.id }}')">Çıkar</button>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <p class="text-muted">Henüz okunan bir kitap yok.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- READLIST TAB -->
+                <div class="tab-pane fade" id="readlist" role="tabpanel">
+                    <div class="row">
+                        {% for book in readlist_books %}
+                            <div class="col-md-2 col-4 mb-3">
+                                <a href="{% url 'book_detail' book.google_id %}">
+                                    {% if book.cover_path %}
+                                        <img src="{{ book.cover_path }}" class="img-fluid rounded movie-poster" alt="{{ book.title }}">
+                                    {% else %}
+                                        <div class="bg-secondary text-white d-flex align-items-center justify-content-center rounded" style="height: 250px;">Kapak Yok</div>
+                                    {% endif %}
+                                </a>
+                                {% if is_owner %}
+                                <button class="btn btn-danger btn-sm w-100 py-0 mt-1" onclick="removeFromList('readlist', 'book', '{{ book.id }}')">Çıkar</button>
+                                {% endif %}
+                            </div>
+                        {% empty %}
+                            <p class="text-muted">Okunacak listeniz boş.</p>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- LISTS TAB -->
+                <div class="tab-pane fade" id="lists" role="tabpanel">
+                    <div class="list-group">
+                        {% for list in custom_lists %}
+                            <a href="{% url 'list_detail' list.id %}" class="list-group-item list-group-item-action bg-card text-white border-secondary d-flex justify-content-between align-items-center mb-2 rounded">
+                                <div>
+                                    <h5 class="mb-1">{{ list.name }}</h5>
+                                    <small class="text-muted">{{ list.movies.count }} Film, {{ list.books.count }} Kitap</small>
+                                </div>
+                                <i class="fas fa-chevron-right text-muted"></i>
+                            </a>
+                        {% empty %}
+                            <p class="text-muted">Henüz özel bir liste oluşturulmamış.</p>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
-
-            <div class="tab-pane fade" id="watchlist">
-                <div class="row">
-                    {% for movie in watchlist_movies %}
-                        <div class="col-md-2 mb-3">
-                            <a href="{% url 'movie_detail' movie.tmdb_id %}">
-                                <img src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" class="img-fluid rounded movie-poster" alt="{{ movie.title }}">
-                            </a>
-                            <p class="text-center small mt-1 fw-bold">{{ movie.title }}</p>
-                        </div>
-                    {% empty %}
-                        <p class="text-muted">İzlenecek listeniz boş.</p>
-                    {% endfor %}
-                </div>
-            </div>
-
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+    <script>
+        // Tab switching logic for styling
+        document.querySelectorAll('#profileTabs button').forEach(button => {
+            button.addEventListener('shown.bs.tab', event => {
+                // Reset all tabs
+                document.querySelectorAll('#profileTabs button').forEach(btn => {
+                    btn.classList.remove('active', 'text-white', 'border-bottom', 'border-3', 'border-success');
+                    btn.classList.add('text-secondary');
+                });
+                // Style active tab
+                event.target.classList.remove('text-secondary');
+                event.target.classList.add('active', 'text-white', 'border-bottom', 'border-3', 'border-success');
+            })
+        });
+    </script>
+
+</div>
+
+<!-- Create List Modal -->
+<div class="modal fade" id="createListModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Yeni Özel Liste Oluştur</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form action="{% url 'create_custom_list' %}" method="POST">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="listName" class="form-label">Liste Adı</label>
+                        <input type="text" class="form-control bg-input text-white border-secondary" id="listName" name="list_name" required placeholder="Örn: En İyi Bilimkurgu Filmleri">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                    <button type="submit" class="btn btn-success">Oluştur</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- TAKİPÇİLER MODAL -->
+<div class="modal fade" id="followersModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Takipçiler</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if followers %}
+                    <ul class="list-group list-group-flush">
+                    {% for follower in followers %}
+                        <li class="list-group-item bg-card text-white border-secondary d-flex justify-content-between align-items-center">
+                            <a href="{% url 'profile' follower.user.username %}" class="text-decoration-none text-white d-flex align-items-center">
+                                {% if follower.avatar %}
+                                    <img src="{{ follower.avatar.url }}" class="rounded-circle me-2" width="40" height="40" style="object-fit: cover;">
+                                {% else %}
+                                    <img src="/media/avatars/usericon.png" class="rounded-circle me-2" width="40" height="40">
+                                {% endif %}
+                                <span>{{ follower.user.username }}</span>
+                            </a>
+                            {% if is_owner %}
+                                <a href="{% url 'remove_follower' follower.user.username %}" class="btn btn-sm btn-outline-danger" onclick="return confirm('Bu kişiyi takipçilerinden çıkarmak istediğine emin misin?')">
+                                    Çıkar
+                                </a>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-center text-muted my-3">Henüz takipçi yok.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- TAKİP EDİLENLER MODAL -->
+<div class="modal fade" id="followingModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Takip Edilenler</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                {% if following %}
+                    <ul class="list-group list-group-flush">
+                    {% for followed in following %}
+                        <li class="list-group-item bg-card text-white border-secondary d-flex justify-content-between align-items-center">
+                            <a href="{% url 'profile' followed.user.username %}" class="text-decoration-none text-white d-flex align-items-center">
+                                {% if followed.avatar %}
+                                    <img src="{{ followed.avatar.url }}" class="rounded-circle me-2" width="40" height="40" style="object-fit: cover;">
+                                {% else %}
+                                    <img src="/media/avatars/usericon.png" class="rounded-circle me-2" width="40" height="40">
+                                {% endif %}
+                                <span>{{ followed.user.username }}</span>
+                            </a>
+                            {% if is_owner %}
+                                <a href="{% url 'follow_user' followed.user.username %}" class="btn btn-sm btn-outline-secondary" onclick="return confirm('Takibi bırakmak istediğine emin misin?')">
+                                    Takibi Bırak
+                                </a>
+                            {% endif %}
+                        </li>
+                    {% endfor %}
+                    </ul>
+                {% else %}
+                    <p class="text-center text-muted my-3">Henüz kimseyi takip etmiyor.</p>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function removeFromList(listType, type, id) {
+        if(!confirm('Bu içeriği listeden çıkarmak istediğinize emin misiniz?')) return;
+
+        const csrftoken = getCookie('csrftoken');
+        const formData = new FormData();
+        formData.append('action', 'remove_from_list');
+        formData.append('list_type', listType);
+        formData.append('target_type', type);
+        formData.append('target_id', id);
+
+        fetch('{% url "movie_interaction" %}', {
+            method: 'POST',
+            headers: { 'X-CSRFToken': csrftoken },
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.status === 'removed') {
+                location.reload();
+            } else {
+                alert('Hata: ' + data.message);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    }
+</script>
+{% endblock %}

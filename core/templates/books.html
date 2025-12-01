@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="row mt-4">
+    <!-- Sol Taraf: Kitap Listesi -->
+    <div class="col-md-9">
+        <h2 class="mb-4 border-bottom border-secondary pb-2 text-white">Kitaplar - {{ current_category|title }}</h2>
+        
+        <div class="row">
+            {% for book in books %}
+            <div class="col-md-3 col-6 mb-4">
+                <div class="card h-100 shadow-lg border border-secondary bg-card">
+                    <a href="{% url 'book_detail' book.google_id %}">
+                        {% if book.cover_url %}
+                            <img src="{{ book.cover_url }}" class="card-img-top" alt="{{ book.title }}" style="height: 250px; object-fit: contain; padding: 10px; background: #2c3440;">
+                        {% else %}
+                            <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 250px;">
+                                Kapak Yok
+                            </div>
+                        {% endif %}
+                    </a>
+                    <div class="card-body d-flex flex-column">
+                        <h6 class="card-title fw-bold small mb-1">
+                            <a href="{% url 'book_detail' book.google_id %}" class="text-white text-decoration-none">{{ book.title }}</a>
+                        </h6>
+                        <p class="text-muted x-small mb-2">{{ book.authors }}</p>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="col-12">
+                <div class="alert alert-secondary bg-input text-white border-secondary">Kitap bulunamadı.</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Sağ Taraf: Sidebar -->
+    <div class="col-md-3">
+        <!-- Kategoriler -->
+        <div class="card shadow-lg border border-secondary bg-card mb-4">
+            <div class="card-header bg-input border-secondary fw-bold text-white">
+                <i class="fas fa-filter"></i> Kategoriler
+            </div>
+            <div class="list-group list-group-flush">
+                {% for cat in categories %}
+                <a href="?category={{ cat.id }}" class="list-group-item list-group-item-action bg-card text-white border-secondary {% if current_category == cat.id %}active{% endif %}">
+                    {{ cat.name }}
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Site İçi En İyiler -->
+        {% if local_top_books %}
+        <div class="card shadow-lg border border-secondary bg-card">
+            <div class="card-header bg-input border-secondary fw-bold text-white">
+                <i class="fas fa-trophy text-warning"></i> Kullanıcıların Favorileri
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for book in local_top_books %}
+                <li class="list-group-item bg-card border-secondary d-flex justify-content-between align-items-center">
+                    <a href="{% url 'book_detail' book.google_id %}" class="text-decoration-none text-white small fw-bold text-truncate" style="max-width: 150px;">
+                        {{ book.title }}
+                    </a>
+                    <span class="badge bg-warning text-dark rounded-pill">{{ book.avg_rating|floatformat:1 }}</span>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

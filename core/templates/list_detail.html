@@ -1,0 +1,189 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ user_list.name }} - Liste Detayı{% endblock %}
+
+{% block content %}
+    <div class="container mt-5">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <h2 class="text-white">{{ user_list.name }}</h2>
+            {% if is_owner %}
+            <span class="badge bg-primary">Listeniz</span>
+            {% else %}
+            <span class="badge bg-secondary">{{ user_list.user.username }} kullanıcısının listesi</span>
+            {% endif %}
+        </div>
+
+        <!-- LİSTE İÇERİĞİ -->
+        <div class="row" id="listContent">
+            {% for movie in movies %}
+            <div class="col-md-2 col-6 mb-4 position-relative">
+                <div class="card h-100 shadow-lg border border-secondary bg-card">
+                    <a href="{% url 'movie_detail' movie.tmdb_id %}">
+                        {% if movie.poster_path %}
+                        <img src="https://image.tmdb.org/t/p/w500{{ movie.poster_path }}" class="card-img-top" alt="{{ movie.title }}">
+                        {% else %}
+                        <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 250px;">Resim Yok</div>
+                        {% endif %}
+                    </a>
+                    <div class="card-body p-2 text-center">
+                        <small class="fw-bold text-white">{{ movie.title }}</small>
+                    </div>
+                    {% if is_owner %}
+                    <button class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 rounded-circle" 
+                            onclick="removeFromList('movie', '{{ movie.id }}')" title="Listeden Çıkar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+
+            {% for book in books %}
+            <div class="col-md-2 col-6 mb-4 position-relative">
+                <div class="card h-100 shadow-lg border border-secondary bg-card">
+                    <a href="{% url 'book_detail' book.google_id %}">
+                        {% if book.cover_path %}
+                        <img src="{{ book.cover_path }}" class="card-img-top" alt="{{ book.title }}">
+                        {% else %}
+                        <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 250px;">Kapak Yok</div>
+                        {% endif %}
+                    </a>
+                    <div class="card-body p-2 text-center">
+                        <small class="fw-bold text-white">{{ book.title }}</small>
+                    </div>
+                    {% if is_owner %}
+                    <button class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 rounded-circle" 
+                            onclick="removeFromList('book', '{{ book.id }}')" title="Listeden Çıkar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+
+            {% if not movies and not books %}
+            <div class="col-12 text-center text-muted py-5">
+                <h4>Bu liste henüz boş.</h4>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- ARAMA VE EKLEME BÖLÜMÜ (Sadece Sahibi İçin) -->
+        {% if is_owner %}
+        <hr class="my-5 border-secondary">
+        <div class="card shadow-lg border border-secondary bg-card p-4 mb-5">
+            <h4 class="mb-3 text-white"><i class="fas fa-plus-circle text-success"></i> Listeye Yeni İçerik Ekle</h4>
+            <div class="input-group mb-3">
+                <input type="text" id="searchInput" class="form-control bg-input text-white border-secondary" placeholder="Film veya Kitap Ara...">
+                <button class="btn btn-primary" type="button" onclick="searchContent()">Ara</button>
+            </div>
+            
+            <div id="searchResults" class="row g-3"></div>
+        </div>
+        {% endif %}
+
+    </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function removeFromList(type, id) {
+        if(!confirm('Bu içeriği listeden çıkarmak istediğinize emin misiniz?')) return;
+
+        fetch(`/list/remove/{{ user_list.id }}/${type}/${id}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success') {
+                location.reload();
+            } else {
+                alert('Hata oluştu: ' + data.message);
+            }
+        });
+    }
+
+    async function searchContent() {
+        const query = document.getElementById('searchInput').value;
+        const resultsDiv = document.getElementById('searchResults');
+        
+        if (!query) return;
+
+        resultsDiv.innerHTML = '<div class="text-center text-white"><div class="spinner-border text-primary" role="status"></div><p class="mt-2">Aranıyor...</p></div>';
+
+        try {
+            const response = await fetch(`/api/search/?q=${query}`);
+            const data = await response.json();
+
+            resultsDiv.innerHTML = ''; 
+
+            // Filmler
+            if (data.movies && data.movies.length > 0) {
+                resultsDiv.innerHTML += '<h5 class="col-12 mt-3 text-white border-bottom border-secondary pb-2">Filmler</h5>';
+                data.movies.forEach(movie => {
+                    resultsDiv.innerHTML += `
+                        <div class="col-md-2 col-4">
+                            <div class="card h-100 bg-card border-secondary">
+                                <img src="${movie.poster_path ? 'https://image.tmdb.org/t/p/w200' + movie.poster_path : 'https://via.placeholder.com/150'}" class="card-img-top">
+                                <div class="card-body p-2 text-center">
+                                    <small class="d-block text-truncate text-white">${movie.title}</small>
+                                    <button class="btn btn-sm btn-success mt-2 w-100" onclick="addToList('movie', '${movie.id}')">Ekle</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            // Kitaplar
+            if (data.books && data.books.length > 0) {
+                resultsDiv.innerHTML += '<h5 class="col-12 mt-3 text-white border-bottom border-secondary pb-2">Kitaplar</h5>';
+                data.books.forEach(book => {
+                    resultsDiv.innerHTML += `
+                        <div class="col-md-2 col-4">
+                            <div class="card h-100 bg-card border-secondary">
+                                <img src="${book.cover_path || 'https://via.placeholder.com/150'}" class="card-img-top">
+                                <div class="card-body p-2 text-center">
+                                    <small class="d-block text-truncate text-white">${book.title}</small>
+                                    <button class="btn btn-sm btn-success mt-2 w-100" onclick="addToList('book', '${book.google_id}')">Ekle</button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            if ((!data.movies || data.movies.length === 0) && (!data.books || data.books.length === 0)) {
+                resultsDiv.innerHTML = '<div class="col-12 text-center text-muted">Sonuç bulunamadı.</div>';
+            }
+
+        } catch (error) {
+            console.error('Hata:', error);
+            resultsDiv.innerHTML = '<div class="col-12 text-center text-danger">Bir hata oluştu.</div>';
+        }
+    }
+
+    function addToList(type, id) {
+        fetch(`/list/add/{{ user_list.id }}/${type}/${id}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success') {
+                alert('Eklendi!');
+                location.reload();
+            } else {
+                alert('Hata: ' + data.message);
+            }
+        });
+    }
+</script>
+{% endblock %}

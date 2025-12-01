@@ -1,0 +1,231 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container mt-4">
+    <!-- Tabs -->
+    <ul class="nav nav-tabs border-bottom-0 mb-4" id="membersTab" role="tablist">
+        <li class="nav-item" role="presentation">
+            <button class="nav-link active bg-transparent border-0 border-bottom border-3 border-success rounded-0 text-white" id="members-tab" data-bs-toggle="tab" data-bs-target="#members" type="button" role="tab">
+                <i class="fas fa-users text-success"></i> Popüler Üyeler
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link bg-transparent border-0 text-muted" id="reviews-tab" data-bs-toggle="tab" data-bs-target="#reviews" type="button" role="tab">
+                <i class="fas fa-star text-warning"></i> Popüler İncelemeler
+            </button>
+        </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link bg-transparent border-0 text-muted" id="popular-tab" data-bs-toggle="tab" data-bs-target="#popular" type="button" role="tab">
+                <i class="fas fa-fire text-danger"></i> En Çok Beğenilenler
+            </button>
+        </li>
+    </ul>
+
+    <div class="tab-content" id="membersTabContent">
+        
+        <!-- EN AKTİF ÜYELER (Letterboxd Style) -->
+        <div class="tab-pane fade show active" id="members" role="tabpanel">
+            <div class="row">
+                {% for member in active_users %}
+                <div class="col-lg-4 col-md-6 mb-4">
+                    <div class="d-flex flex-column align-items-center text-center">
+                        <!-- Avatar -->
+                        <a href="{% url 'profile' member.username %}" class="mb-3 position-relative">
+                            {% if member.profile.avatar %}
+                                <img src="{{ member.profile.avatar.url }}" class="rounded-circle border border-2 border-secondary" 
+                                     style="width: 100px; height: 100px; object-fit: cover;">
+                            {% else %}
+                                <img src="/media/avatars/usericon.png" class="rounded-circle border border-2 border-secondary" 
+                                     style="width: 100px; height: 100px; object-fit: cover;"
+                                     onerror="this.src='/media/avatars/usericon.png'">
+                            {% endif %}
+                        </a>
+                        
+                        <!-- Username & Stats -->
+                        <h5 class="fw-bold mb-1">
+                            <a href="{% url 'profile' member.username %}" class="text-white text-decoration-none">{{ member.username }}</a>
+                        </h5>
+                        <p class="text-muted small mb-3">
+                            <span class="text-white">{{ member.movie_count }}</span> Film • 
+                            <span class="text-white">{{ member.book_count }}</span> Kitap • 
+                            <span class="text-white">{{ member.review_count }}</span> İnceleme
+                        </p>
+
+                        <!-- Recent Activity Strip -->
+                        <div class="d-flex justify-content-center gap-1 w-100 px-3">
+                            {% for item in member.recent_items %}
+                                <div style="width: 50px; height: 75px;" class="bg-card rounded overflow-hidden position-relative shadow-sm border border-secondary">
+                                    <img src="{{ item.image }}" alt="{{ item.title }}" class="w-100 h-100" style="object-fit: cover;"
+                                         title="{{ item.title }}">
+                                </div>
+                            {% empty %}
+                                <div class="text-muted x-small py-4 w-100 bg-card rounded border border-secondary border-opacity-25">
+                                    Henüz aktivite yok
+                                </div>
+                            {% endfor %}
+                            
+                            <!-- Fill empty slots if less than 4 items but more than 0 -->
+                            {% if member.recent_items|length > 0 and member.recent_items|length < 4 %}
+                                {% for i in "x"|rjust:3 %}
+                                    {% if forloop.counter <= 4|add:"-"|add:member.recent_items|length %}
+                                        <div style="width: 50px; height: 75px;" class="bg-card rounded border border-secondary border-opacity-10"></div>
+                                    {% endif %}
+                                {% endfor %}
+                            {% endif %}
+                        </div>
+                        
+                        <hr class="w-100 border-secondary opacity-25 mt-4">
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="alert alert-secondary bg-input text-white border-secondary">Henüz üye yok.</div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- POPÜLER İNCELEMELER -->
+        <div class="tab-pane fade" id="reviews" role="tabpanel">
+            <div class="row">
+                {% for activity in popular_reviews %}
+                <div class="col-md-6 mb-4">
+                    <div class="card h-100 shadow-lg border border-secondary bg-card">
+                        <div class="card-body">
+                            <div class="d-flex align-items-center mb-3">
+                                <a href="{% url 'profile' activity.user.username %}" class="text-decoration-none">
+                                    {% if activity.user.profile.avatar %}
+                                        <img src="{{ activity.user.profile.avatar.url }}" class="rounded-circle me-2" width="40" height="40" style="object-fit: cover;">
+                                    {% else %}
+                                        <img src="/media/avatars/usericon.png" class="rounded-circle me-2" width="40" height="40" style="object-fit: cover;"
+                                             onerror="this.src='/media/avatars/usericon.png'">
+                                    {% endif %}
+                                </a>
+                                <div>
+                                    <h6 class="fw-bold mb-0"><a href="{% url 'profile' activity.user.username %}" class="text-white text-decoration-none">{{ activity.user.username }}</a></h6>
+                                    <small class="text-muted">{{ activity.created_at|timesince }} önce</small>
+                                </div>
+                            </div>
+                            
+                            <div class="bg-input p-3 rounded mb-3 position-relative border border-secondary">
+                                <i class="fas fa-quote-left text-muted opacity-25 position-absolute top-0 start-0 m-2 fa-2x"></i>
+                                <p class="mb-0 fst-italic ps-4 pt-2 text-white-50">
+                                    "{{ activity.related_review.text|truncatechars:200 }}"
+                                </p>
+                            </div>
+
+                            <div class="d-flex align-items-center">
+                                {% if activity.movie %}
+                                    <img src="https://image.tmdb.org/t/p/w92{{ activity.movie.poster_path }}" class="rounded me-3" width="45" height="68">
+                                    <div>
+                                        <h6 class="fw-bold mb-0 small text-white">{{ activity.movie.title }}</h6>
+                                        <span class="badge bg-success x-small">Film</span>
+                                    </div>
+                                {% elif activity.book %}
+                                    <img src="{{ activity.book.cover_path }}" class="rounded me-3" width="45" height="68">
+                                    <div>
+                                        <h6 class="fw-bold mb-0 small text-white">{{ activity.book.title }}</h6>
+                                        <span class="badge bg-warning text-dark x-small">Kitap</span>
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="ms-auto text-danger">
+                                    <i class="fas fa-heart"></i> {{ activity.like_count }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12"><div class="alert alert-secondary bg-input text-white border-secondary">Henüz popüler bir inceleme yok.</div></div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- EN ÇOK BEĞENİLENLER -->
+        <div class="tab-pane fade" id="popular" role="tabpanel">
+            <div class="row">
+                {% for activity in popular_activities %}
+                <div class="col-md-4 mb-4">
+                    <div class="card h-100 shadow-lg border border-secondary bg-card">
+                        <div class="card-body">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div class="d-flex align-items-center">
+                                    <img src="{% if activity.user.profile.avatar %}{{ activity.user.profile.avatar.url }}{% else %}/media/avatars/usericon.png{% endif %}" 
+                                         class="rounded-circle me-2" width="30" height="30" style="object-fit: cover;"
+                                         onerror="this.src='/media/avatars/usericon.png'">
+                                    <small class="fw-bold text-white">{{ activity.user.username }}</small>
+                                </div>
+                                <span class="badge bg-danger"><i class="fas fa-heart"></i> {{ activity.like_count }}</span>
+                            </div>
+                            
+                            <p class="small text-muted mb-2">
+                                {% if activity.action_type == 'RATED' %}
+                                    bir içeriği puanladı.
+                                {% elif activity.action_type == 'REVIEWED' %}
+                                    bir içerik hakkında yorum yaptı.
+                                {% elif activity.action_type == 'ADDED_LIST' %}
+                                    bir içeriği listesine ekledi.
+                                {% elif activity.action_type == 'SHARED' %}
+                                    bir gönderiyi paylaştı.
+                                {% endif %}
+                            </p>
+
+                            {% if activity.action_type == 'REVIEWED' and activity.related_review %}
+                                <div class="bg-input p-2 rounded mb-2 position-relative border border-secondary">
+                                    <p class="mb-0 fst-italic text-white-50 small">
+                                        "{{ activity.related_review.text|truncatechars:100 }}"
+                                    </p>
+                                </div>
+                            {% endif %}
+
+                            {% if activity.movie %}
+                                <div class="d-flex bg-input p-2 rounded border border-secondary">
+                                    <img src="https://image.tmdb.org/t/p/w92{{ activity.movie.poster_path }}" class="rounded me-2" width="40" height="60">
+                                    <div>
+                                        <h6 class="fw-bold mb-0 x-small text-white">{{ activity.movie.title }}</h6>
+                                        {% if activity.related_rating %}
+                                            <span class="badge bg-warning text-dark x-small">{{ activity.related_rating.score }}/10</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% elif activity.book %}
+                                <div class="d-flex bg-input p-2 rounded border border-secondary">
+                                    <img src="{{ activity.book.cover_path }}" class="rounded me-2" width="40" height="60">
+                                    <div>
+                                        <h6 class="fw-bold mb-0 x-small text-white">{{ activity.book.title }}</h6>
+                                        {% if activity.related_rating %}
+                                            <span class="badge bg-warning text-dark x-small">{{ activity.related_rating.score }}/10</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12"><div class="alert alert-secondary bg-input text-white border-secondary">Henüz popüler bir içerik yok.</div></div>
+                {% endfor %}
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script>
+    // Tab switching logic for custom styled tabs
+    document.querySelectorAll('#membersTab button').forEach(button => {
+        button.addEventListener('click', function() {
+            // Remove active class from all buttons
+            document.querySelectorAll('#membersTab button').forEach(btn => {
+                btn.classList.remove('active', 'border-bottom', 'border-3', 'border-success', 'text-white');
+                btn.classList.add('text-muted');
+            });
+            
+            // Add active class to clicked button
+            this.classList.add('active', 'border-bottom', 'border-3', 'border-success', 'text-white');
+            this.classList.remove('text-muted');
+        });
+    });
+</script>
+{% endblock %}

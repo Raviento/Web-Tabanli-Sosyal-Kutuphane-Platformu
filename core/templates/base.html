@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Sosyal Kütüphane{% endblock %}</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --bg-dark: #14181c;
+            --bg-card: #1e2328;
+            --bg-input: #2c3440;
+            --text-primary: #def; /* Softer white */
+            --text-secondary: #9ab;
+            --accent-color: #00c030; /* Slightly darker green for better contrast */
+            --border-color: #2c3440;
+            --nav-bg: #1e2328;
+        }
+
+        body {
+            background-color: var(--bg-dark) !important;
+            color: var(--text-primary) !important;
+        }
+
+        /* Global Bootstrap Overrides for Dark Mode */
+        .bg-light {
+            background-color: var(--bg-card) !important;
+            color: var(--text-primary) !important;
+        }
+        
+        .bg-white {
+            background-color: #242c34 !important; /* Distinct from bg-card */
+            color: var(--text-primary) !important;
+            border-color: var(--border-color) !important;
+        }
+
+        .text-dark {
+            color: var(--text-primary) !important;
+        }
+
+        .text-muted {
+            color: var(--text-secondary) !important;
+        }
+
+        .border, .border-top, .border-bottom, .border-end, .border-start {
+            border-color: var(--border-color) !important;
+        }
+
+        /* Navbar */
+        .navbar {
+            background-color: var(--nav-bg) !important;
+            border-bottom: 1px solid var(--border-color);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.3);
+        }
+        .navbar-brand {
+            color: #fff !important;
+            font-weight: 800;
+            letter-spacing: 1px;
+        }
+        .nav-link {
+            color: var(--text-secondary) !important;
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: color 0.2s;
+        }
+        .nav-link:hover, .nav-link.active {
+            color: #fff !important;
+        }
+
+        /* Cards */
+        .card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border-color);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+        }
+        .card-header {
+            background-color: rgba(255,255,255,0.02);
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        /* Buttons */
+        .btn-primary {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: #fff;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+            letter-spacing: 0.5px;
+        }
+        .btn-primary:hover {
+            background-color: #00a028;
+            border-color: #00a028;
+            color: #fff;
+        }
+        
+        .btn-light {
+            background-color: var(--bg-input);
+            color: var(--text-secondary);
+            border: 1px solid var(--border-color);
+        }
+        .btn-light:hover {
+            background-color: #364050;
+            color: #fff;
+            border-color: #456;
+        }
+        
+        .btn-outline-light {
+            border-color: var(--border-color);
+            color: var(--text-secondary);
+        }
+        .btn-outline-light:hover {
+            background-color: var(--bg-input);
+            color: #fff;
+            border-color: var(--text-secondary);
+        }
+
+        /* Inputs */
+        .form-control {
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            color: #fff;
+        }
+        .form-control:focus {
+            background-color: #303845;
+            border-color: var(--accent-color);
+            color: #fff;
+            box-shadow: none;
+        }
+        .form-control::placeholder {
+            color: #567;
+        }
+
+        /* List Group */
+        .list-group-item {
+            background-color: var(--bg-card);
+            border-color: var(--border-color);
+            color: var(--text-primary);
+        }
+        .list-group-item-action:hover {
+            background-color: #242c34;
+            color: #fff;
+        }
+
+        /* Links */
+        a { text-decoration: none; color: inherit; transition: color 0.2s; }
+        a:hover { color: var(--accent-color); }
+
+        /* Utilities */
+        .shadow-sm { box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important; }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-dark); }
+        ::-webkit-scrollbar-thumb { background: #345; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #456; }
+
+        .card-img-top { height: 300px; object-fit: cover; }
+        .nav-avatar { width: 32px; height: 32px; object-fit: cover; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'home' %}">Sosyal Kütüphane</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <!-- Sol Menü (Sayfalar) -->
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'movies_page' %}"><i class="fas fa-film"></i> Filmler</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'books_page' %}"><i class="fas fa-book"></i> Kitaplar</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'members_page' %}"><i class="fas fa-users"></i> Üyeler</a>
+                    </li>
+                </ul>
+
+                <!-- Mini Search Bar -->
+                <form class="d-flex me-3" role="search" action="{% url 'search_page' %}" method="GET">
+                    <div class="input-group input-group-sm">
+                        <input class="form-control border-end-0" type="search" name="q" placeholder="Ara..." aria-label="Search" style="width: 200px; background-color: #2c3440; border-color: #456; color: #fff;">
+                        <button class="btn btn-outline-secondary border-start-0" type="submit" style="background-color: #2c3440; border-color: #456; color: #9ab;">
+                            <i class="fas fa-search"></i>
+                        </button>
+                    </div>
+                </form>
+
+                <!-- Sağ Menü (Kullanıcı İşlemleri) -->
+                <ul class="navbar-nav align-items-center">
+                    {% if user.is_authenticated %}
+                        <li class="nav-item me-3">
+                            <a href="{% url 'profile' user.username %}" class="text-white text-decoration-none d-flex align-items-center">
+                                {% if user.profile.avatar %}
+                                    <img src="{{ user.profile.avatar.url }}" class="nav-avatar me-2">
+                                {% else %}
+                                    <img src="/media/avatars/usericon.png" class="nav-avatar me-2" onerror="this.src='/media/avatars/usericon.png'">
+                                {% endif %}
+                                <span>{{ user.username }}</span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'logout' %}" class="btn btn-outline-danger btn-sm">Çıkış Yap</a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item me-2">
+                            <a href="{% url 'login' %}" class="btn btn-outline-light btn-sm">Giriş</a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="{% url 'register' %}" class="btn btn-primary btn-sm">Kayıt Ol</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

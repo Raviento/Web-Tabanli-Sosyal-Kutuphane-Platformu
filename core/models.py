@@ -59,6 +59,8 @@ class Activity(models.Model):
         ('RATED', 'Puanladı'),
         ('REVIEWED', 'Yorumladı'),
         ('ADDED_LIST', 'Listeye Ekledi'),
+        ('SHARED', 'Paylaştı'),
+        ('COMMENTED', 'Yorum Yaptı'),
     )
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='activities')
     action_type = models.CharField(max_length=20, choices=ACTION_TYPES)
@@ -69,10 +71,27 @@ class Activity(models.Model):
     
     related_rating = models.ForeignKey(Rating, on_delete=models.SET_NULL, null=True, blank=True)
     related_review = models.ForeignKey(Review, on_delete=models.SET_NULL, null=True, blank=True)
-
-    related_list = models.ForeignKey('UserList', on_delete=models.SET_NULL, null=True, blank=True) 
+    related_list = models.ForeignKey('UserList', on_delete=models.SET_NULL, null=True, blank=True)
+    related_comment = models.ForeignKey('ActivityComment', on_delete=models.SET_NULL, null=True, blank=True, related_name='activity_reference')
+    
+    original_activity = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True, related_name='shares')
+    
     class Meta:
         ordering = ['-created_at']
+
+class ActivityLike(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='likes')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'activity')
+
+class ActivityComment(models.Model):
+    user = models.ForeignKey(User, on_delete=models.CASCADE)
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='comments')
+    text = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
 
 # --- 5. LİSTELER (PDF: 2.1.4 & 2.1.5 - EKSİK OLAN KISIM) ---
 class UserList(models.Model):
@@ -94,4 +113,3 @@ class UserList(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.name}"
-    

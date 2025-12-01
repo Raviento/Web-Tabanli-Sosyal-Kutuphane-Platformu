@@ -1,0 +1,170 @@
+{% extends 'base.html' %}
+
+{% block title %}Arama Sonuçları - {{ query }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <!-- Sol Kolon: Sonuçlar -->
+        <div class="col-md-9">
+            <h5 class="text-muted border-bottom border-secondary pb-2 mb-4 text-uppercase" style="font-size: 0.85rem; letter-spacing: 1px;">
+                "{{ query }}" için sonuçlar gösteriliyor
+            </h5>
+
+            <!-- Filmler -->
+            {% if results.movies %}
+                {% for movie in results.movies %}
+                <div class="card bg-transparent border-0 border-bottom border-secondary mb-3 pb-3 rounded-0">
+                    <div class="row g-0">
+                        <div class="col-auto">
+                            <a href="{% url 'movie_detail' movie.id %}">
+                                {% if movie.poster_path %}
+                                <img src="https://image.tmdb.org/t/p/w92{{ movie.poster_path }}" class="rounded border border-secondary" alt="{{ movie.title }}" style="width: 70px; height: 105px; object-fit: cover;">
+                                {% else %}
+                                <div class="bg-card border border-secondary rounded d-flex align-items-center justify-content-center text-muted" style="width: 70px; height: 105px;">
+                                    <i class="fas fa-film"></i>
+                                </div>
+                                {% endif %}
+                            </a>
+                        </div>
+                        <div class="col ps-3">
+                            <h5 class="mb-1">
+                                <a href="{% url 'movie_detail' movie.id %}" class="text-white text-decoration-none fw-bold">{{ movie.title }}</a>
+                                <span class="text-muted fw-normal ms-1">
+                                    {% if movie.release_date %}
+                                        {{ movie.release_date|slice:":4" }}
+                                    {% endif %}
+                                </span>
+                            </h5>
+                            
+                            {% if movie.director %}
+                            <div class="text-muted small mb-2">
+                                Yönetmen: <span class="text-white-50">{{ movie.director }}</span>
+                            </div>
+                            {% endif %}
+                            
+                            <p class="text-muted small mb-0 text-truncate" style="max-width: 600px;">
+                                {{ movie.overview }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Kitaplar -->
+            {% if results.books %}
+                {% for book in results.books %}
+                <div class="card bg-transparent border-0 border-bottom border-secondary mb-3 pb-3 rounded-0">
+                    <div class="row g-0">
+                        <div class="col-auto">
+                            <a href="{% url 'book_detail' book.google_id %}">
+                                {% if book.cover_url %}
+                                <img src="{{ book.cover_url }}" class="rounded border border-secondary" alt="{{ book.title }}" style="width: 70px; height: 105px; object-fit: cover;">
+                                {% else %}
+                                <div class="bg-card border border-secondary rounded d-flex align-items-center justify-content-center text-muted" style="width: 70px; height: 105px;">
+                                    <i class="fas fa-book"></i>
+                                </div>
+                                {% endif %}
+                            </a>
+                        </div>
+                        <div class="col ps-3">
+                            <h5 class="mb-1">
+                                <a href="{% url 'book_detail' book.google_id %}" class="text-white text-decoration-none fw-bold">{{ book.title }}</a>
+                            </h5>
+                            
+                            {% if book.authors %}
+                            <div class="text-muted small mb-2">
+                                Yazar: <span class="text-white-50">{{ book.authors }}</span>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            <!-- Kullanıcılar -->
+            {% if results.users %}
+                {% for user in results.users %}
+                <div class="card bg-transparent border-0 border-bottom border-secondary mb-3 pb-3 rounded-0">
+                    <div class="row g-0 align-items-center">
+                        <div class="col-auto">
+                            <a href="{% url 'profile' user.username %}">
+                                {% if user.avatar %}
+                                <img src="{{ user.avatar }}" class="rounded-circle border border-secondary" alt="{{ user.username }}" style="width: 50px; height: 50px; object-fit: cover;">
+                                {% else %}
+                                <img src="/media/avatars/usericon.png" class="rounded-circle border border-secondary" alt="{{ user.username }}" style="width: 50px; height: 50px; object-fit: cover;">
+                                {% endif %}
+                            </a>
+                        </div>
+                        <div class="col ps-3">
+                            <h5 class="mb-0">
+                                <a href="{% url 'profile' user.username %}" class="text-white text-decoration-none fw-bold">{{ user.username }}</a>
+                            </h5>
+                            <small class="text-muted">Üye</small>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+
+            {% if not results.movies and not results.books and not results.users %}
+                <div class="text-center py-5 text-muted">
+                    <i class="fas fa-search fa-3x mb-3"></i>
+                    <p>Sonuç bulunamadı.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Sağ Kolon: Filtreler -->
+        <div class="col-md-3">
+            <h5 class="text-muted border-bottom border-secondary pb-2 mb-3 text-uppercase" style="font-size: 0.85rem; letter-spacing: 1px;">
+                Sonuçları Filtrele
+            </h5>
+            
+            <div class="list-group list-group-flush bg-transparent">
+                <a href="#" class="list-group-item list-group-item-action bg-transparent text-white d-flex justify-content-between align-items-center px-0 border-0 py-1 active-filter">
+                    Tümü
+                    <span class="badge bg-secondary rounded-pill">{{ results.movies|length|add:results.books|length|add:results.users|length }}</span>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
+                    Filmler
+                    <span class="badge bg-dark border border-secondary text-muted rounded-pill">{{ results.movies|length }}</span>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
+                    Kitaplar
+                    <span class="badge bg-dark border border-secondary text-muted rounded-pill">{{ results.books|length }}</span>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
+                    Üyeler
+                    <span class="badge bg-dark border border-secondary text-muted rounded-pill">{{ results.users|length }}</span>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
+                    İncelemeler
+                    <span class="badge bg-dark border border-secondary text-muted rounded-pill">0</span>
+                </a>
+                <a href="#" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
+                    Listeler
+                    <span class="badge bg-dark border border-secondary text-muted rounded-pill">0</span>
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .active-filter {
+        color: #fff !important;
+        font-weight: bold;
+    }
+    .list-group-item-action:hover {
+        color: #fff !important;
+        background-color: transparent !important;
+    }
+    .list-group-item-action:hover .badge {
+        background-color: #456 !important;
+        color: #fff !important;
+    }
+</style>
+{% endblock %}
