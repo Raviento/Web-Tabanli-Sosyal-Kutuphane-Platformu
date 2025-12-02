@@ -1,0 +1,386 @@
+{% extends 'base.html' %}
+
+{% block extra_css %}
+<style>
+    .feed-avatar { width: 40px; height: 40px; object-fit: cover; border: 2px solid #2c3440; }
+    .feed-poster { width: 70px; height: 100px; object-fit: cover; border-radius: 5px; }
+    .showcase-poster { transition: transform 0.2s; }
+    .showcase-poster:hover { transform: scale(1.05); }
+    .nav-pills .nav-link.active { background-color: var(--accent-color); }
+    .nav-pills .nav-link.active { color: #fff; }
+    .nav-pills .nav-link { color: var(--text-secondary); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    
+    <!-- VİTRİN MODÜLLERİ -->
+    <section class="mb-5">
+        <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
+            <h4 class="text-white mb-0"><i class="fas fa-star text-warning me-2"></i> Vitrin</h4>
+            <ul class="nav nav-pills nav-sm" id="showcase-tabs" role="tablist">
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link active py-1 px-3" id="platform-popular-tab" data-bs-toggle="pill" data-bs-target="#platform-popular-content" type="button" role="tab">Site Popüler (Film)</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1 px-3" id="api-popular-tab" data-bs-toggle="pill" data-bs-target="#api-popular-content" type="button" role="tab">Global Popüler (Film)</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1 px-3" id="platform-top-tab" data-bs-toggle="pill" data-bs-target="#platform-top-content" type="button" role="tab">Site En İyi (Film)</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1 px-3" id="api-top-tab" data-bs-toggle="pill" data-bs-target="#api-top-content" type="button" role="tab">Global En İyi (Film)</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1 px-3" id="platform-books-tab" data-bs-toggle="pill" data-bs-target="#platform-books-content" type="button" role="tab">Site Popüler (Kitap)</button>
+                </li>
+                <li class="nav-item" role="presentation">
+                    <button class="nav-link py-1 px-3" id="api-books-tab" data-bs-toggle="pill" data-bs-target="#api-books-content" type="button" role="tab">Global Popüler (Kitap)</button>
+                </li>
+            </ul>
+        </div>
+
+        <div class="tab-content" id="showcase-tabContent">
+            <!-- Site Popüler (Film) -->
+            <div class="tab-pane fade show active" id="platform-popular-content" role="tabpanel">
+                {% if platform_popular_movies %}
+                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
+                    {% for movie in platform_popular_movies %}
+                    <div class="col">
+                        <div class="card h-100 bg-transparent border-0">
+                            <a href="{% url 'movie_detail' movie.id %}" class="position-relative d-block showcase-poster">
+                                <img src="{{ movie.image }}" class="card-img-top rounded shadow-sm" alt="{{ movie.title }}" style="aspect-ratio: 2/3; object-fit: cover;">
+                                <div class="position-absolute top-0 end-0 m-1 badge bg-primary shadow-sm">
+                                    <i class="fas fa-fire"></i>
+                                </div>
+                            </a>
+                            <div class="mt-2">
+                                <h6 class="card-title small fw-bold mb-0 text-truncate">
+                                    <a href="{% url 'movie_detail' movie.id %}" class="text-white text-decoration-none">{{ movie.title }}</a>
+                                </h6>
+                                <small class="text-muted x-small">{{ movie.subtitle }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">Henüz yeterli veri yok.</div>
+                {% endif %}
+            </div>
+
+            <!-- Global Popüler (Film) -->
+            <div class="tab-pane fade" id="api-popular-content" role="tabpanel">
+                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
+                    {% for movie in api_popular_movies %}
+                    <div class="col">
+                        <div class="card h-100 bg-transparent border-0">
+                            <a href="{% url 'movie_detail' movie.id %}" class="position-relative d-block showcase-poster">
+                                <img src="{{ movie.image }}" class="card-img-top rounded shadow-sm" alt="{{ movie.title }}" style="aspect-ratio: 2/3; object-fit: cover;">
+                                <div class="position-absolute top-0 end-0 m-1 badge bg-info shadow-sm">
+                                    <i class="fas fa-globe"></i>
+                                </div>
+                            </a>
+                            <div class="mt-2">
+                                <h6 class="card-title small fw-bold mb-0 text-truncate">
+                                    <a href="{% url 'movie_detail' movie.id %}" class="text-white text-decoration-none">{{ movie.title }}</a>
+                                </h6>
+                                <small class="text-muted x-small">{{ movie.subtitle }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            
+            <!-- Site En İyi (Film) -->
+            <div class="tab-pane fade" id="platform-top-content" role="tabpanel">
+                {% if platform_top_rated_movies %}
+                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
+                    {% for movie in platform_top_rated_movies %}
+                    <div class="col">
+                        <div class="card h-100 bg-transparent border-0">
+                            <a href="{% url 'movie_detail' movie.id %}" class="position-relative d-block showcase-poster">
+                                <img src="{{ movie.image }}" class="card-img-top rounded shadow-sm" alt="{{ movie.title }}" style="aspect-ratio: 2/3; object-fit: cover;">
+                                <div class="position-absolute top-0 end-0 m-1 badge bg-warning text-dark shadow-sm">
+                                    {{ movie.vote_average|floatformat:1 }}
+                                </div>
+                            </a>
+                            <div class="mt-2">
+                                <h6 class="card-title small fw-bold mb-0 text-truncate">
+                                    <a href="{% url 'movie_detail' movie.id %}" class="text-white text-decoration-none">{{ movie.title }}</a>
+                                </h6>
+                                <small class="text-muted x-small">{{ movie.subtitle }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">Henüz yeterli veri yok.</div>
+                {% endif %}
+            </div>
+
+            <!-- Global En İyi (Film) -->
+            <div class="tab-pane fade" id="api-top-content" role="tabpanel">
+                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
+                    {% for movie in api_top_rated_movies %}
+                    <div class="col">
+                        <div class="card h-100 bg-transparent border-0">
+                            <a href="{% url 'movie_detail' movie.id %}" class="position-relative d-block showcase-poster">
+                                <img src="{{ movie.image }}" class="card-img-top rounded shadow-sm" alt="{{ movie.title }}" style="aspect-ratio: 2/3; object-fit: cover;">
+                                <div class="position-absolute top-0 end-0 m-1 badge bg-warning text-dark shadow-sm">
+                                    {{ movie.vote_average|floatformat:1 }}
+                                </div>
+                            </a>
+                            <div class="mt-2">
+                                <h6 class="card-title small fw-bold mb-0 text-truncate">
+                                    <a href="{% url 'movie_detail' movie.id %}" class="text-white text-decoration-none">{{ movie.title }}</a>
+                                </h6>
+                                <small class="text-muted x-small">{{ movie.subtitle }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Site Popüler (Kitap) -->
+            <div class="tab-pane fade" id="platform-books-content" role="tabpanel">
+                {% if platform_popular_books %}
+                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
+                    {% for book in platform_popular_books %}
+                    <div class="col">
+                        <div class="card h-100 bg-transparent border-0">
+                            <a href="{% url 'book_detail' book.google_id %}" class="position-relative d-block showcase-poster">
+                                <img src="{{ book.image }}" class="card-img-top rounded shadow-sm" alt="{{ book.title }}" style="aspect-ratio: 2/3; object-fit: cover;">
+                                <div class="position-absolute top-0 end-0 m-1 badge bg-primary shadow-sm">
+                                    <i class="fas fa-fire"></i>
+                                </div>
+                            </a>
+                            <div class="mt-2">
+                                <h6 class="card-title small fw-bold mb-0 text-truncate">
+                                    <a href="{% url 'book_detail' book.google_id %}" class="text-white text-decoration-none">{{ book.title }}</a>
+                                </h6>
+                                <small class="text-muted x-small">{{ book.subtitle }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="text-center py-5 text-muted">Henüz yeterli veri yok.</div>
+                {% endif %}
+            </div>
+
+            <!-- Global Popüler (Kitap) -->
+            <div class="tab-pane fade" id="api-books-content" role="tabpanel">
+                <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
+                    {% for book in api_popular_books %}
+                    <div class="col">
+                        <div class="card h-100 bg-transparent border-0">
+                            <a href="{% url 'book_detail' book.google_id %}" class="position-relative d-block showcase-poster">
+                                <img src="{{ book.cover_url }}" class="card-img-top rounded shadow-sm" alt="{{ book.title }}" style="aspect-ratio: 2/3; object-fit: cover;">
+                                <div class="position-absolute top-0 end-0 m-1 badge bg-info shadow-sm">
+                                    <i class="fas fa-globe"></i>
+                                </div>
+                            </a>
+                            <div class="mt-2">
+                                <h6 class="card-title small fw-bold mb-0 text-truncate">
+                                    <a href="{% url 'book_detail' book.google_id %}" class="text-white text-decoration-none">{{ book.title }}</a>
+                                </h6>
+                                <small class="text-muted x-small">{{ book.authors }}</small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- GELİŞMİŞ FİLTRELEME -->
+    <section class="mb-5">
+        <h4 class="text-white mb-3 border-bottom border-secondary pb-2"><i class="fas fa-filter text-info me-2"></i> Keşfet & Filtrele</h4>
+        
+        <div class="card bg-card border-secondary mb-4">
+            <div class="card-body">
+                <form id="filter-form" class="row g-3 align-items-end">
+                    <div class="col-md-2">
+                        <label class="form-label text-muted small">Tür</label>
+                        <select class="form-select form-select-sm bg-input text-white border-secondary" name="type" id="filter-type">
+                            <option value="movie">Film</option>
+                            <option value="book">Kitap</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-muted small">Kategori / Tür</label>
+                        <select class="form-select form-select-sm bg-input text-white border-secondary" name="genre" id="filter-genre">
+                            <option value="">Tümü</option>
+                            {% for genre in genres %}
+                                <option value="{{ genre.id }}">{{ genre.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <input type="text" class="form-control form-control-sm bg-input text-white border-secondary d-none" name="book_genre" id="filter-book-genre" placeholder="Örn: Fiction, History...">
+                    </div>
+                    <div class="col-md-2">
+                        <label class="form-label text-muted small">Yıl</label>
+                        <input type="number" class="form-control form-control-sm bg-input text-white border-secondary" name="year" placeholder="Örn: 2023">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label text-muted small">Minimum Puan</label>
+                        <input type="range" class="form-range" min="0" max="10" step="0.5" id="score-range" name="score" oninput="document.getElementById('score-val').textContent = this.value">
+                        <div class="text-end text-muted x-small"><span id="score-val">5</span> ve üzeri</div>
+                    </div>
+                    <div class="col-md-2">
+                        <button type="submit" class="btn btn-primary btn-sm w-100"><i class="fas fa-search"></i> Filtrele</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <div id="filter-results-container">
+            <!-- Filtre sonuçları buraya gelecek -->
+        </div>
+    </section>
+
+    <!-- TOPLULUK AKIŞI -->
+    <section>
+        <h4 class="text-white mb-4 border-bottom border-secondary pb-2"><i class="fas fa-globe text-success me-2"></i> Topluluk Akışı</h4>
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <div id="activity-container">
+                    {% for activity in activities %}
+                        {% include 'partials/activity_card.html' %}
+                    {% endfor %}
+                </div>
+
+                <!-- Daha Fazla Yükle Butonu -->
+                {% if activities.has_next %}
+                    <div class="text-center mt-4 mb-5">
+                        <button id="load-more-btn" class="btn btn-outline-primary px-4 py-2" data-next-page="{{ activities.next_page_number }}">
+                            <i class="fas fa-sync-alt me-2"></i> Daha Fazla Yükle
+                        </button>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Filtreleme Mantığı
+    document.getElementById('filter-type').addEventListener('change', function() {
+        const type = this.value;
+        const genreSelect = document.getElementById('filter-genre');
+        const bookGenreInput = document.getElementById('filter-book-genre');
+        
+        if (type === 'book') {
+            genreSelect.classList.add('d-none');
+            genreSelect.disabled = true;
+            bookGenreInput.classList.remove('d-none');
+            bookGenreInput.disabled = false;
+        } else {
+            genreSelect.classList.remove('d-none');
+            genreSelect.disabled = false;
+            bookGenreInput.classList.add('d-none');
+            bookGenreInput.disabled = true;
+        }
+    });
+
+    document.getElementById('filter-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        const params = new URLSearchParams(formData);
+        
+        // Kitap seçiliyse genre parametresini book_genre inputundan al
+        if (document.getElementById('filter-type').value === 'book') {
+            params.set('genre', document.getElementById('filter-book-genre').value);
+        }
+
+        const container = document.getElementById('filter-results-container');
+        container.innerHTML = '<div class="text-center py-5"><i class="fas fa-spinner fa-spin fa-2x text-muted"></i></div>';
+
+        fetch(`{% url 'filter_content' %}?${params.toString()}`)
+            .then(response => response.json())
+            .then(data => {
+                container.innerHTML = data.html;
+            });
+    });
+
+    // Akış Beğeni/Yorum/Yükle Mantığı (index.html'den kopyalandı)
+    function toggleComments(activityId) {
+        const commentsDiv = document.getElementById(`comments-${activityId}`);
+        commentsDiv.classList.toggle('d-none');
+    }
+
+    function copyLink(activityId) {
+        const url = `${window.location.origin}/activity/${activityId}`;
+        navigator.clipboard.writeText(url).then(() => {
+            alert('Bağlantı kopyalandı!');
+        });
+    }
+
+    function toggleLike(activityId, btn) {
+        fetch(`/activity/like/${activityId}/`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'liked') {
+                    btn.classList.remove('btn-outline-secondary', 'text-muted');
+                    btn.classList.add('btn-danger', 'text-white');
+                    btn.querySelector('i').classList.remove('far');
+                    btn.querySelector('i').classList.add('fas');
+                } else {
+                    btn.classList.remove('btn-danger', 'text-white');
+                    btn.classList.add('btn-outline-secondary', 'text-muted');
+                    btn.querySelector('i').classList.remove('fas');
+                    btn.querySelector('i').classList.add('far');
+                }
+                btn.querySelector('.like-count').textContent = data.like_count;
+            });
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const loadMoreBtn = document.getElementById('load-more-btn');
+        if (loadMoreBtn) {
+            loadMoreBtn.addEventListener('click', function() {
+                const nextPage = this.getAttribute('data-next-page');
+                const btn = this;
+                const originalText = btn.innerHTML;
+                
+                btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Yükleniyor...';
+                btn.disabled = true;
+
+                fetch(`?page=${nextPage}`, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const container = document.getElementById('activity-container');
+                    container.insertAdjacentHTML('beforeend', data.html);
+                    
+                    if (data.has_next) {
+                        btn.setAttribute('data-next-page', data.next_page_number);
+                        btn.innerHTML = originalText;
+                        btn.disabled = false;
+                    } else {
+                        btn.remove();
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                    alert('Bir hata oluştu, lütfen tekrar deneyin.');
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}

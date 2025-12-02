@@ -1,0 +1,231 @@
+<div class="card mb-4 shadow-lg border border-secondary bg-card">
+    <div class="card-body">
+        <div class="d-flex align-items-center mb-3">
+            
+            <a href="{% url 'profile' activity.user.username %}" class="text-decoration-none">
+                {% if activity.user.profile.avatar %}
+                    <img src="{{ activity.user.profile.avatar.url }}" class="rounded-circle feed-avatar me-2 shadow-sm" 
+                         onerror="this.onerror=null;this.src='/media/avatars/usericon.png';">
+                {% else %}
+                    <img src="/media/avatars/usericon.png" class="rounded-circle feed-avatar me-2 shadow-sm">
+                {% endif %}
+            </a>
+            
+            <div>
+                <span class="fw-bold">
+                    <a href="{% url 'profile' activity.user.username %}" class="text-decoration-none text-white">{{ activity.user.username }}</a>
+                </span>
+                <span class="text-muted small ms-1">
+                    {% if activity.action_type == 'ADDED_LIST' %}
+                        bir içeriği kütüphanesine ekledi.
+                    {% elif activity.action_type == 'RATED' %}
+                        bir içeriği puanladı.
+                    {% elif activity.action_type == 'REVIEWED' %}
+                        bir içerik hakkında yorum yaptı.
+                    {% elif activity.action_type == 'COMMENTED' %}
+                        {% if activity.original_activity.user %}
+                            <a href="{% url 'profile' activity.original_activity.user.username %}" class="text-decoration-none text-info">{{ activity.original_activity.user.username }}</a> kullanıcısının
+                            {% if activity.original_activity.action_type == 'REVIEWED' %}
+                                incelemesine yorum yaptı.
+                            {% elif activity.original_activity.action_type == 'RATED' %}
+                                puanına yorum yaptı.
+                            {% else %}
+                                gönderisine yorum yaptı.
+                            {% endif %}
+                        {% else %}
+                            bir gönderiye yorum yaptı.
+                        {% endif %}
+                    {% elif activity.action_type == 'SHARED' %}
+                        <span class="text-info"><i class="fas fa-retweet"></i> bir gönderiyi paylaştı.</span>
+                    {% endif %}
+                </span>
+                <div class="text-muted x-small" style="font-size: 0.75rem;">{{ activity.created_at|timesince }} önce</div>
+            </div>
+        </div>
+
+        {% if activity.action_type == 'SHARED' %}
+            <div class="p-3 border border-secondary rounded bg-dark mb-3">
+                <div class="d-flex align-items-center mb-2">
+                    <img src="{% if activity.original_activity.user.profile.avatar %}{{ activity.original_activity.user.profile.avatar.url }}{% else %}/media/avatars/usericon.png{% endif %}" 
+                         class="rounded-circle me-2" width="30" height="30" onerror="this.src='/media/avatars/usericon.png'">
+                    <small class="fw-bold text-white">{{ activity.original_activity.user.username }}</small>
+                    <small class="text-muted ms-2">
+                        {% if activity.original_activity.action_type == 'RATED' %}puanladı{% elif activity.original_activity.action_type == 'REVIEWED' %}yorumladı{% endif %}
+                    </small>
+                </div>
+                <!-- Orijinal İçerik -->
+                <div class="d-flex bg-card p-2 rounded align-items-start border border-secondary">
+                    {% with original=activity.original_activity %}
+                        {% if original.movie %}
+                            <div class="text-center me-3">
+                                <img src="https://image.tmdb.org/t/p/w200{{ original.movie.poster_path }}" class="feed-poster shadow-sm" style="width: 50px; height: 75px;">
+                                {% if original.action_type == 'RATED' and original.related_rating %}
+                                    <div class="mt-1 badge bg-warning text-dark w-100" style="font-size: 0.6rem;">
+                                        {{ original.related_rating.score }}/10
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-0 small text-white">{{ original.movie.title }}</h6>
+                                {% if original.action_type == 'REVIEWED' and original.related_review %}
+                                    <p class="small text-muted fst-italic mb-0">"{{ original.related_review.text|truncatechars:100 }}"</p>
+                                {% endif %}
+                            </div>
+                        {% elif original.book %}
+                            <div class="text-center me-3">
+                                <img src="{{ original.book.cover_path }}" class="feed-poster shadow-sm" style="width: 50px; height: 75px;">
+                                {% if original.action_type == 'RATED' and original.related_rating %}
+                                    <div class="mt-1 badge bg-warning text-dark w-100" style="font-size: 0.6rem;">
+                                        {{ original.related_rating.score }}/10
+                                    </div>
+                                {% endif %}
+                            </div>
+                            <div>
+                                <h6 class="fw-bold mb-0 small text-white">{{ original.book.title }}</h6>
+                                {% if original.action_type == 'REVIEWED' and original.related_review %}
+                                    <p class="small text-muted fst-italic mb-0">"{{ original.related_review.text|truncatechars:100 }}"</p>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    {% endwith %}
+                </div>
+            </div>
+        {% else %}
+            <div class="d-flex bg-input p-3 rounded align-items-start border border-secondary">
+                {% if activity.movie %}
+                    <div class="text-center me-3">
+                        <a href="{% url 'movie_detail' activity.movie.tmdb_id %}">
+                            {% if activity.movie.poster_path %}
+                                <img src="https://image.tmdb.org/t/p/w200{{ activity.movie.poster_path }}" class="feed-poster shadow-sm"
+                                     onerror="this.onerror=null;this.src='https://via.placeholder.com/70x100?text=Film';">
+                            {% else %}
+                                <div class="feed-poster bg-secondary d-flex align-items-center justify-content-center text-white" style="width:70px; height:100px; font-size: 0.75rem;">Resim Yok</div>
+                            {% endif %}
+                        </a>
+                        {% if activity.action_type == 'RATED' and activity.related_rating %}
+                            <div class="mt-2 badge bg-warning text-dark w-100">
+                                <i class="fas fa-star"></i> {{ activity.related_rating.score }}/10
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold mb-1">
+                            <a href="{% url 'movie_detail' activity.movie.tmdb_id %}" class="text-white text-decoration-none">{{ activity.movie.title }}</a>
+                        </h6>
+                        <span class="badge bg-success mb-2"><i class="fas fa-film"></i> Film</span>
+                        
+                        {% if activity.action_type == 'ADDED_LIST' and activity.related_list %}
+                            <p class="text-muted small mb-0">Listeye Eklendi: <strong>{{ activity.related_list.get_list_type_display }}</strong></p>
+                        {% elif activity.action_type == 'REVIEWED' and activity.related_review %}
+                            <div class="mt-2 p-2 bg-card border border-secondary rounded position-relative">
+                                <i class="fas fa-quote-left text-muted opacity-25 position-absolute top-0 start-0 m-2"></i>
+                                <p class="small text-white-50 mb-1 fst-italic ps-3 pt-1">
+                                    "{{ activity.related_review.text|truncatechars:150 }}"
+                                </p>
+                                <a href="{% url 'movie_detail' activity.movie.tmdb_id %}" class="small text-info text-decoration-none d-block text-end">...daha fazlasını oku</a>
+                            </div>
+                        {% elif activity.action_type == 'COMMENTED' and activity.related_comment %}
+                            <div class="mt-2 p-2 bg-card border border-secondary rounded position-relative">
+                                <p class="small text-white mb-1">
+                                    <i class="fas fa-comment text-muted me-1"></i> {{ activity.related_comment.text }}
+                                </p>
+                                {% if activity.original_activity.related_review %}
+                                    <div class="mt-2 ps-2 border-start border-secondary">
+                                        <small class="text-muted fst-italic">
+                                            "{{ activity.original_activity.related_review.text|truncatechars:60 }}"
+                                        </small>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                
+                {% elif activity.book %}
+                    <div class="text-center me-3">
+                        <a href="{% url 'book_detail' activity.book.google_id %}">
+                            {% if activity.book.cover_path %}
+                                <img src="{{ activity.book.cover_path }}" class="feed-poster shadow-sm" 
+                                     onerror="this.onerror=null;this.src='https://via.placeholder.com/70x100?text=Kapak+Yok';">
+                            {% else %}
+                                <div class="feed-poster bg-secondary d-flex align-items-center justify-content-center text-white" style="width:70px; height:100px; font-size: 0.75rem;">Kapak Yok</div>
+                            {% endif %}
+                        </a>
+                        {% if activity.action_type == 'RATED' and activity.related_rating %}
+                            <div class="mt-2 badge bg-warning text-dark w-100">
+                                <i class="fas fa-star"></i> {{ activity.related_rating.score }}/10
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="flex-grow-1">
+                        <h6 class="fw-bold mb-1">
+                            <a href="{% url 'book_detail' activity.book.google_id %}" class="text-white text-decoration-none">{{ activity.book.title }}</a>
+                        </h6>
+                        <span class="badge bg-warning text-dark mb-2"><i class="fas fa-book"></i> Kitap</span>
+                        
+                        {% if activity.action_type == 'ADDED_LIST' and activity.related_list %}
+                            <p class="text-muted small mb-0">Listeye Eklendi: <strong>{{ activity.related_list.get_list_type_display }}</strong></p>
+                        {% elif activity.action_type == 'REVIEWED' and activity.related_review %}
+                            <div class="mt-2 p-2 bg-card border border-secondary rounded position-relative">
+                                <i class="fas fa-quote-left text-muted opacity-25 position-absolute top-0 start-0 m-2"></i>
+                                <p class="small text-white-50 mb-1 fst-italic ps-3 pt-1">
+                                    "{{ activity.related_review.text|truncatechars:150 }}"
+                                </p>
+                                <a href="{% url 'book_detail' activity.book.google_id %}" class="small text-info text-decoration-none d-block text-end">...daha fazlasını oku</a>
+                            </div>
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+
+        <!-- Footer / Etkileşim -->
+        <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-secondary">
+            <button class="btn btn-sm {% if activity.is_liked %}btn-danger text-white{% else %}btn-outline-secondary text-muted{% endif %}" 
+                    onclick="toggleLike('{{ activity.id }}', this)">
+                <i class="{% if activity.is_liked %}fas{% else %}far{% endif %} fa-heart"></i> 
+                <span class="like-count">{{ activity.like_count }}</span> Beğen
+            </button>
+            <button class="btn btn-sm btn-outline-secondary text-muted" onclick="toggleComments('{{ activity.id }}')">
+                <i class="far fa-comment"></i> {{ activity.comment_list|length }} Yorum
+            </button>
+            
+            <div class="dropdown">
+                <button class="btn btn-sm btn-outline-secondary text-muted dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <i class="fas fa-share"></i> Paylaş
+                </button>
+                <ul class="dropdown-menu bg-card border-secondary">
+                    <li><a class="dropdown-item text-white hover-bg-dark" href="#" onclick="copyLink('{{ activity.id }}'); return false;"><i class="fas fa-link"></i> Bağlantıyı Kopyala</a></li>
+                    {% if activity.is_shared %}
+                        <li><a class="dropdown-item text-danger hover-bg-dark" href="{% url 'share_activity' activity.id %}"><i class="fas fa-trash"></i> Paylaşımı Kaldır</a></li>
+                    {% else %}
+                        <li><a class="dropdown-item text-white hover-bg-dark" href="{% url 'share_activity' activity.id %}"><i class="fas fa-retweet"></i> Profilimde Paylaş</a></li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+
+        <!-- Yorumlar Bölümü (Gizli) -->
+        <div id="comments-{{ activity.id }}" class="mt-3 d-none border-top border-secondary pt-3">
+            {% for comment in activity.comment_list %}
+                <div class="d-flex mb-2">
+                    <img src="{% if comment.user.profile.avatar %}{{ comment.user.profile.avatar.url }}{% else %}/media/avatars/usericon.png{% endif %}" 
+                         class="rounded-circle me-2" width="30" height="30" style="object-fit: cover;" onerror="this.src='/media/avatars/usericon.png'">
+                    <div class="bg-input p-2 rounded w-100 border border-secondary">
+                        <div class="d-flex justify-content-between">
+                            <strong class="small text-white">{{ comment.user.username }}</strong>
+                            <small class="text-muted x-small">{{ comment.created_at|timesince }} önce</small>
+                        </div>
+                        <p class="small mb-0 text-white-50">{{ comment.text }}</p>
+                    </div>
+                </div>
+            {% endfor %}
+            
+            <form action="{% url 'add_activity_comment' activity.id %}" method="POST" class="mt-2 d-flex">
+                {% csrf_token %}
+                <input type="text" name="text" class="form-control form-control-sm me-2 bg-input text-white border-secondary" placeholder="Yorum yaz..." required>
+                <button type="submit" class="btn btn-sm btn-primary"><i class="fas fa-paper-plane"></i></button>
+            </form>
+        </div>
+
+    </div>
+</div>

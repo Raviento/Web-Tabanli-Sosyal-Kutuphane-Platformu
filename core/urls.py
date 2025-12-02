@@ -11,7 +11,7 @@ from core.views import (
     create_custom_list, list_detail, remove_follower,
     add_rating, add_review, delete_review, edit_review,
     like_activity, add_activity_comment, share_activity,
-    movies_page, books_page, members_page, search_page, explore # YENİ
+    movies_page, books_page, members_page, search_page, explore, filter_content # YENİ
 )
 
 # API Router
@@ -23,6 +23,7 @@ router.register(r'feed', FeedViewSet, basename='feed')
 urlpatterns = [
     path('', index, name='home'),
     path('explore/', explore, name='explore'), # YENİ
+    path('explore/filter/', filter_content, name='filter_content'), # YENİ
     path('movies/', movies_page, name='movies_page'),
     path('books/', books_page, name='books_page'),
     path('members/', members_page, name='members_page'),

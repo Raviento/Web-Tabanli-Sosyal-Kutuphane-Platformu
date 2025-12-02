@@ -1,5 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.http import JsonResponse
+from django.template.loader import render_to_string
 from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.forms import AuthenticationForm
 from django.contrib.auth.models import User
@@ -14,7 +15,7 @@ from .serializers import MovieSerializer, BookSerializer, ActivitySerializer
 from .services import (
     search_content_service, get_movie_detail_service, get_book_detail_service,
     get_popular_movies, get_top_rated_movies, get_movie_genres, get_movies_by_genre,
-    get_books_by_category
+    get_books_by_category, discover_movies
 )
 from .forms import ProfileUpdateForm
 
@@ -103,6 +104,62 @@ class SearchView(APIView):
 
 from django.core.paginator import Paginator
 
+def get_platform_popular_movies():
+    # Platformda en çok etkileşim alan filmler
+    popular_movies = Movie.objects.annotate(
+        interaction_count=Count('activity')
+    ).order_by('-interaction_count')[:6]
+    
+    results = []
+    for movie in popular_movies:
+        results.append({
+            'id': movie.tmdb_id,
+            'title': movie.title,
+            'image': f"https://image.tmdb.org/t/p/w500{movie.poster_path}" if movie.poster_path else None,
+            'subtitle': f"{movie.interaction_count} Etkileşim",
+            'vote_average': movie.vote_average
+        })
+    return results
+
+def get_platform_top_rated_movies():
+    # Platformda en yüksek puanlı filmler
+    top_rated = Rating.objects.filter(movie__isnull=False).values('movie').annotate(
+        avg_score=Avg('score'),
+        count=Count('id')
+    ).filter(count__gte=1).order_by('-avg_score')[:6]
+    
+    results = []
+    for item in top_rated:
+        try:
+            movie = Movie.objects.get(id=item['movie'])
+            results.append({
+                'id': movie.tmdb_id,
+                'title': movie.title,
+                'image': f"https://image.tmdb.org/t/p/w500{movie.poster_path}" if movie.poster_path else None,
+                'subtitle': f"{item['avg_score']:.1f} Puan",
+                'vote_average': item['avg_score']
+            })
+        except Movie.DoesNotExist:
+            continue
+    return results
+
+def get_platform_popular_books():
+    # Platformda en çok etkileşim alan kitaplar
+    popular_books = Book.objects.annotate(
+        interaction_count=Count('activity')
+    ).order_by('-interaction_count')[:6]
+    
+    results = []
+    for book in popular_books:
+        results.append({
+            'google_id': book.google_id,
+            'title': book.title,
+            'image': book.cover_path,
+            'subtitle': f"{book.interaction_count} Etkileşim",
+            'authors': book.authors
+        })
+    return results
+
 # --- FRONTEND VIEWS ---
 def explore(request):
     # Keşfet Sayfası: Takip edilen/edilmeyen herkesin aktiviteleri (Kullanıcının kendisi hariç)
@@ -130,8 +187,66 @@ def explore(request):
                 action_type='SHARED', 
                 original_activity_id=target_id
             ).exists()
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        html = ""
+        for activity in activities:
+            html += render_to_string('partials/activity_card.html', {'activity': activity, 'user': request.user}, request=request)
+        
+        return JsonResponse({
+            'html': html,
+            'has_next': activities.has_next(),
+            'next_page_number': activities.next_page_number() if activities.has_next() else None
+        })
+    
+    # Vitrin Verileri - AYRI AYRI
+    # 1. Platform Verileri
+    platform_popular_movies = get_platform_popular_movies()
+    platform_top_rated_movies = get_platform_top_rated_movies()
+    platform_popular_books = get_platform_popular_books()
+    
+    # 2. API Verileri (Global)
+    api_popular_movies = get_popular_movies()[:6]
+    api_top_rated_movies = get_top_rated_movies()[:6]
+    api_popular_books = get_books_by_category("subject:fiction")[:6] # Global kitaplar için proxy
+    
+    genres = get_movie_genres()
             
-    return render(request, 'index.html', {'activities': activities, 'page_title': 'Keşfet'})
+    context = {
+        'activities': activities, 
+        'page_title': 'Keşfet',
+        'platform_popular_movies': platform_popular_movies,
+        'platform_top_rated_movies': platform_top_rated_movies,
+        'platform_popular_books': platform_popular_books,
+        'api_popular_movies': api_popular_movies,
+        'api_top_rated_movies': api_top_rated_movies,
+        'api_popular_books': api_popular_books,
+        'genres': genres
+    }
+    return render(request, 'explore.html', context)
+
+def filter_content(request):
+    """
+    Keşfet sayfasındaki gelişmiş filtreleme için AJAX endpoint.
+    """
+    content_type = request.GET.get('type', 'movie')
+    genre_id = request.GET.get('genre')
+    year = request.GET.get('year')
+    min_score = request.GET.get('score')
+    
+    results = []
+    
+    if content_type == 'movie':
+        results = discover_movies(genre_id=genre_id, year=year, min_score=min_score)
+    elif content_type == 'book':
+        # Kitaplar için şimdilik sadece kategori (genre) bazlı arama yapıyoruz
+        # Google Books API filtreleme konusunda kısıtlı
+        query = f"subject:{genre_id}" if genre_id else "subject:fiction"
+        results = get_books_by_category(query)
+        
+    # Sonuçları HTML olarak döndür
+    html = render_to_string('partials/filter_results.html', {'results': results, 'type': content_type})
+    return JsonResponse({'html': html})
 
 def index(request):
     if request.user.is_authenticated:
@@ -165,6 +280,17 @@ def index(request):
                 action_type='SHARED', 
                 original_activity_id=target_id
             ).exists()
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        html = ""
+        for activity in activities:
+            html += render_to_string('partials/activity_card.html', {'activity': activity, 'user': request.user}, request=request)
+        
+        return JsonResponse({
+            'html': html,
+            'has_next': activities.has_next(),
+            'next_page_number': activities.next_page_number() if activities.has_next() else None
+        })
         
     return render(request, 'index.html', {'activities': activities, 'page_title': 'Zaman Tüneli'})
 

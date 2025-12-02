@@ -119,20 +119,30 @@
         }
 
         /* Inputs */
-        .form-control {
-            background-color: var(--bg-input);
-            border: 1px solid var(--border-color);
-            color: #fff;
+        .form-control, .form-select {
+            background-color: var(--bg-input) !important;
+            border: 1px solid var(--border-color) !important;
+            color: #fff !important;
         }
-        .form-control:focus {
-            background-color: #303845;
-            border-color: var(--accent-color);
-            color: #fff;
+        .form-control:focus, .form-select:focus {
+            background-color: #303845 !important;
+            border-color: var(--accent-color) !important;
+            color: #fff !important;
             box-shadow: none;
         }
         .form-control::placeholder {
             color: #567;
         }
+        
+        /* Fix for Select Options in Dark Mode */
+        select option {
+            background-color: var(--bg-input);
+            color: #fff;
+        }
+        
+        /* Utility Classes */
+        .bg-input { background-color: var(--bg-input) !important; }
+        .bg-card { background-color: var(--bg-card) !important; }
 
         /* List Group */
         .list-group-item {

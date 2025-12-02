@@ -183,6 +183,24 @@ def get_movies_by_genre(genre_id):
     }
     return _fetch_tmdb_movies(url, params)
 
+def discover_movies(genre_id=None, year=None, min_score=None):
+    url = f"{TMDB_URL}/discover/movie"
+    params = {
+        'api_key': TMDB_API_KEY, 
+        'language': 'tr-TR', 
+        'sort_by': 'popularity.desc',
+        'vote_count.gte': 100  # Anlamsız sonuçları elemek için
+    }
+    
+    if genre_id:
+        params['with_genres'] = genre_id
+    if year:
+        params['primary_release_year'] = year
+    if min_score:
+        params['vote_average.gte'] = min_score
+        
+    return _fetch_tmdb_movies(url, params)
+
 def get_books_by_category(query):
     # Google Books'ta kategori araması "subject:kategori" şeklinde yapılır
     # Ancak view tarafında zaten tam sorgu gönderiliyor, o yüzden direkt arama yapıyoruz.

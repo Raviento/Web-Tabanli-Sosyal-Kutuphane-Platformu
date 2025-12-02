@@ -1,0 +1,53 @@
+{% if results %}
+    <div class="row row-cols-2 row-cols-md-4 row-cols-lg-6 g-3">
+        {% for item in results %}
+            <div class="col">
+                <div class="card h-100 bg-transparent border-0">
+                    <a href="{% if type == 'movie' %}{% url 'movie_detail' item.id %}{% else %}{% url 'book_detail' item.google_id %}{% endif %}" class="position-relative d-block">
+                        {% if type == 'movie' %}
+                            {% if item.poster_path %}
+                                <img src="https://image.tmdb.org/t/p/w342{{ item.poster_path }}" class="card-img-top rounded shadow-sm" alt="{{ item.title }}" style="aspect-ratio: 2/3; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-secondary rounded d-flex align-items-center justify-content-center text-white shadow-sm" style="aspect-ratio: 2/3;">
+                                    <i class="fas fa-film fa-2x"></i>
+                                </div>
+                            {% endif %}
+                            {% if item.vote_average %}
+                                <div class="position-absolute top-0 end-0 m-1 badge bg-warning text-dark shadow-sm">
+                                    {{ item.vote_average|floatformat:1 }}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            {% if item.cover_url %}
+                                <img src="{{ item.cover_url }}" class="card-img-top rounded shadow-sm" alt="{{ item.title }}" style="aspect-ratio: 2/3; object-fit: cover;">
+                            {% else %}
+                                <div class="bg-secondary rounded d-flex align-items-center justify-content-center text-white shadow-sm" style="aspect-ratio: 2/3;">
+                                    <i class="fas fa-book fa-2x"></i>
+                                </div>
+                            {% endif %}
+                        {% endif %}
+                    </a>
+                    <div class="mt-2">
+                        <h6 class="card-title small fw-bold mb-0 text-truncate">
+                            <a href="{% if type == 'movie' %}{% url 'movie_detail' item.id %}{% else %}{% url 'book_detail' item.google_id %}{% endif %}" class="text-white text-decoration-none">
+                                {{ item.title }}
+                            </a>
+                        </h6>
+                        <small class="text-muted x-small">
+                            {% if type == 'movie' %}
+                                {{ item.release_date|slice:":4" }}
+                            {% else %}
+                                {{ item.authors }}
+                            {% endif %}
+                        </small>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+{% else %}
+    <div class="text-center py-5 text-muted">
+        <i class="fas fa-search fa-3x mb-3"></i>
+        <p>Kriterlere uygun içerik bulunamadı.</p>
+    </div>
+{% endif %}
