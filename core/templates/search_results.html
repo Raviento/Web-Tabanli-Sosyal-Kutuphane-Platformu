@@ -12,6 +12,7 @@
             </h5>
 
             <!-- Filmler -->
+            <div id="movies-section">
             {% if results.movies %}
                 {% for movie in results.movies %}
                 <div class="card bg-transparent border-0 border-bottom border-secondary mb-3 pb-3 rounded-0">
@@ -51,8 +52,10 @@
                 </div>
                 {% endfor %}
             {% endif %}
+            </div>
 
             <!-- Kitaplar -->
+            <div id="books-section">
             {% if results.books %}
                 {% for book in results.books %}
                 <div class="card bg-transparent border-0 border-bottom border-secondary mb-3 pb-3 rounded-0">
@@ -83,8 +86,10 @@
                 </div>
                 {% endfor %}
             {% endif %}
+            </div>
 
             <!-- Kullanıcılar -->
+            <div id="users-section">
             {% if results.users %}
                 {% for user in results.users %}
                 <div class="card bg-transparent border-0 border-bottom border-secondary mb-3 pb-3 rounded-0">
@@ -108,6 +113,7 @@
                 </div>
                 {% endfor %}
             {% endif %}
+            </div>
 
             {% if not results.movies and not results.books and not results.users %}
                 <div class="text-center py-5 text-muted">
@@ -124,19 +130,19 @@
             </h5>
             
             <div class="list-group list-group-flush bg-transparent">
-                <a href="#" class="list-group-item list-group-item-action bg-transparent text-white d-flex justify-content-between align-items-center px-0 border-0 py-1 active-filter">
+                <a href="#" onclick="filterResults('all', this); return false;" class="list-group-item list-group-item-action bg-transparent text-white d-flex justify-content-between align-items-center px-0 border-0 py-1 active-filter">
                     Tümü
                     <span class="badge bg-secondary rounded-pill">{{ results.movies|length|add:results.books|length|add:results.users|length }}</span>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
+                <a href="#" onclick="filterResults('movies', this); return false;" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
                     Filmler
                     <span class="badge bg-dark border border-secondary text-muted rounded-pill">{{ results.movies|length }}</span>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
+                <a href="#" onclick="filterResults('books', this); return false;" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
                     Kitaplar
                     <span class="badge bg-dark border border-secondary text-muted rounded-pill">{{ results.books|length }}</span>
                 </a>
-                <a href="#" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
+                <a href="#" onclick="filterResults('users', this); return false;" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
                     Üyeler
                     <span class="badge bg-dark border border-secondary text-muted rounded-pill">{{ results.users|length }}</span>
                 </a>
@@ -167,4 +173,53 @@
         color: #fff !important;
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function filterResults(type, element) {
+    // Update active state in sidebar
+    document.querySelectorAll('.list-group-item').forEach(item => {
+        item.classList.remove('active-filter', 'text-white');
+        item.classList.add('text-muted');
+        
+        // Reset badge style
+        const badge = item.querySelector('.badge');
+        if (badge) {
+            badge.classList.remove('bg-secondary', 'text-white');
+            badge.classList.add('bg-dark', 'text-muted', 'border', 'border-secondary');
+        }
+    });
+    
+    // Set active state
+    element.classList.add('active-filter', 'text-white');
+    element.classList.remove('text-muted');
+    
+    // Update active badge style
+    const activeBadge = element.querySelector('.badge');
+    if (activeBadge) {
+        activeBadge.classList.remove('bg-dark', 'text-muted', 'border', 'border-secondary');
+        activeBadge.classList.add('bg-secondary', 'text-white');
+    }
+
+    // Show/Hide sections
+    const sections = {
+        'movies': document.getElementById('movies-section'),
+        'books': document.getElementById('books-section'),
+        'users': document.getElementById('users-section')
+    };
+
+    if (type === 'all') {
+        Object.values(sections).forEach(section => {
+            if (section) section.style.display = 'block';
+        });
+    } else {
+        Object.entries(sections).forEach(([key, section]) => {
+            if (section) {
+                section.style.display = key === type ? 'block' : 'none';
+            }
+        });
+    }
+}
+</script>
 {% endblock %}

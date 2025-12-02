@@ -104,6 +104,35 @@ class SearchView(APIView):
 from django.core.paginator import Paginator
 
 # --- FRONTEND VIEWS ---
+def explore(request):
+    # Keşfet Sayfası: Takip edilen/edilmeyen herkesin aktiviteleri (Kullanıcının kendisi hariç)
+    if request.user.is_authenticated:
+        activity_list = Activity.objects.exclude(user=request.user).select_related('user', 'user__profile', 'movie', 'book').order_by('-created_at')
+    else:
+        activity_list = Activity.objects.select_related('user', 'user__profile', 'movie', 'book').all().order_by('-created_at')
+    
+    # Sayfalandırma
+    paginator = Paginator(activity_list, 10) 
+    page_number = request.GET.get('page')
+    activities = paginator.get_page(page_number)
+
+    # Beğeni ve Yorumları Yükle
+    for activity in activities:
+        activity.like_count = activity.likes.count()
+        activity.comment_list = activity.comments.select_related('user', 'user__profile').order_by('created_at')
+        if request.user.is_authenticated:
+            activity.is_liked = activity.likes.filter(user=request.user).exists()
+            
+            # Paylaşım Durumu Kontrolü
+            target_id = activity.original_activity.id if activity.action_type == 'SHARED' else activity.id
+            activity.is_shared = Activity.objects.filter(
+                user=request.user, 
+                action_type='SHARED', 
+                original_activity_id=target_id
+            ).exists()
+            
+    return render(request, 'index.html', {'activities': activities, 'page_title': 'Keşfet'})
+
 def index(request):
     if request.user.is_authenticated:
         # Kullanıcının takip ettiği kişileri bul
@@ -111,17 +140,8 @@ def index(request):
         following_profiles = profile.following.all()
         following_users = [p.user for p in following_profiles]
         
-        # 1. Takip edilenlerin aktiviteleri
-        followed_activities = Activity.objects.filter(user__in=following_users).select_related('user', 'user__profile', 'movie', 'book').order_by('-created_at')
-        
-        # 2. Takip edilmeyenlerin aktiviteleri (Keşfet)
-        other_activities = Activity.objects.exclude(user__in=following_users).exclude(user=request.user).select_related('user', 'user__profile', 'movie', 'book').order_by('-created_at')
-        
-        # Listeleri birleştir ve tarihe göre sırala
-        combined_activities = list(followed_activities) + list(other_activities)
-        combined_activities.sort(key=lambda x: x.created_at, reverse=True)
-        
-        activity_list = combined_activities
+        # SADECE Takip edilenlerin aktiviteleri (Zaman Tüneli)
+        activity_list = Activity.objects.filter(user__in=following_users).select_related('user', 'user__profile', 'movie', 'book').order_by('-created_at')
     else:
         # Giriş yapmamışsa genel akış
         activity_list = Activity.objects.select_related('user', 'user__profile', 'movie', 'book').all().order_by('-created_at')
@@ -146,7 +166,7 @@ def index(request):
                 original_activity_id=target_id
             ).exists()
         
-    return render(request, 'index.html', {'activities': activities})
+    return render(request, 'index.html', {'activities': activities, 'page_title': 'Zaman Tüneli'})
 
 def movie_detail(request, tmdb_id):
     movie_data = get_movie_detail_service(tmdb_id)
@@ -286,14 +306,28 @@ def add_rating(request):
                 defaults={'score': score}
             )
             
-            # Aktivite oluştur
-            Activity.objects.create(
-                user=request.user, 
-                action_type='RATED', 
+            # Aktivite oluştur veya güncelle
+            # Eğer aynı içerik için daha önce 'RATED' aktivitesi varsa, onu güncelle (tarihini yenile)
+            # Yoksa yeni oluştur.
+            
+            activity, activity_created = Activity.objects.update_or_create(
+                user=request.user,
+                action_type='RATED',
                 movie=target_obj if target_type == 'movie' else None,
                 book=target_obj if target_type == 'book' else None,
-                related_rating=rating
+                defaults={'related_rating': rating}
             )
+            
+            # Eğer aktivite zaten varsa, created_at alanını güncellemek için save() çağırabiliriz
+            # Ancak auto_now_add=True olduğu için created_at değişmeyebilir.
+            # Bu yüzden manuel olarak güncellememiz gerekebilir veya modelde auto_now=True kullanmalıyız.
+            # Veya basitçe: eskiyi silip yenisini oluşturmak da bir yöntem ama ID değişir.
+            # En temiz yöntem: created_at'i manuel güncellemek.
+            
+            if not activity_created:
+                from django.utils import timezone
+                activity.created_at = timezone.now()
+                activity.save()
             
             messages.success(request, 'Puanınız kaydedildi.')
         else:
@@ -880,8 +914,8 @@ def books_page(request):
     return render(request, 'books.html', context)
 
 def members_page(request):
-    # En Aktif Üyeler
-    active_users = User.objects.annotate(activity_count=Count('activities')).order_by('-activity_count')[:12]
+    # En Aktif Üyeler (Admin hariç)
+    active_users = User.objects.filter(is_superuser=False).annotate(activity_count=Count('activities')).order_by('-activity_count')[:12]
     
     # Her üye için son 4 aktivite görselini ve istatistikleri al
     for user in active_users:
@@ -927,14 +961,14 @@ def members_page(request):
         user.recent_items = recent_items
 
     # Popüler İncelemeler (En çok beğenilen yorum aktiviteleri)
-    popular_reviews = Activity.objects.filter(action_type='REVIEWED') \
+    popular_reviews = Activity.objects.filter(action_type='REVIEWED', user__is_superuser=False) \
         .exclude(related_review__isnull=True) \
         .exclude(related_review__text='') \
         .annotate(like_count=Count('likes')) \
         .order_by('-like_count')[:6]
     
     # Genel Popüler Paylaşımlar (En çok beğenilen her türlü aktivite)
-    popular_activities = Activity.objects.annotate(like_count=Count('likes')).filter(like_count__gt=0).order_by('-like_count')[:6]
+    popular_activities = Activity.objects.filter(user__is_superuser=False).annotate(like_count=Count('likes')).filter(like_count__gt=0).order_by('-like_count')[:6]
 
     context = {
         'active_users': active_users,

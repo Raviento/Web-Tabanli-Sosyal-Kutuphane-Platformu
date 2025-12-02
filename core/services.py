@@ -29,7 +29,7 @@ def search_content_service(query):
     books = search_books(query)
     
     # Kullanıcı Arama
-    users = User.objects.filter(username__icontains=query)[:5]
+    users = User.objects.filter(username__icontains=query, is_superuser=False)[:5]
     user_results = []
     for user in users:
         avatar_url = user.profile.avatar.url if hasattr(user, 'profile') and user.profile.avatar else None
