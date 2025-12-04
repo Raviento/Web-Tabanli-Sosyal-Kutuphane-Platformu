@@ -905,7 +905,7 @@ def like_activity(request, activity_id):
         liked = True
         
     if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        return JsonResponse({'liked': liked, 'count': activity.likes.count()})
+        return JsonResponse({'status': 'liked' if liked else 'unliked', 'like_count': activity.likes.count()})
     
     return redirect(request.META.get('HTTP_REFERER', 'home'))
 
@@ -1096,6 +1096,14 @@ def members_page(request):
     # Genel Popüler Paylaşımlar (En çok beğenilen her türlü aktivite)
     popular_activities = Activity.objects.filter(user__is_superuser=False).annotate(like_count=Count('likes')).filter(like_count__gt=0).order_by('-like_count')[:6]
 
+    # Beğeni durumlarını kontrol et
+    if request.user.is_authenticated:
+        for activity in popular_reviews:
+            activity.is_liked = activity.likes.filter(user=request.user).exists()
+        
+        for activity in popular_activities:
+            activity.is_liked = activity.likes.filter(user=request.user).exists()
+
     context = {
         'active_users': active_users,
         'popular_reviews': popular_reviews,
@@ -1111,3 +1119,22 @@ def search_page(request):
         results = search_content_service(query)
         
     return render(request, 'search_results.html', {'query': query, 'results': results})
+
+@login_required
+def notifications_page(request):
+    # Tüm bildirimleri al
+    notifications = request.user.notifications.all().select_related('sender', 'sender__profile', 'activity')
+    
+    # Okunmamış bildirimleri işaretlemek için bir kopyasını al (template'de kullanmak için)
+    # Not: Queryset evaluate edildiğinde veritabanına gider, bu yüzden listeye çevirip işlem yapabiliriz
+    # Ancak sayfalama vs. yoksa direkt update yapmak daha performanslıdır.
+    # Burada kullanıcının "Yeni" ibaresini görmesi için önce listeyi çekiyoruz, sonra update ediyoruz.
+    
+    notifications_list = list(notifications)
+    
+    # Sayfaya girildiği an tüm okunmamışları okundu olarak işaretle
+    unread_notifications = request.user.notifications.filter(is_read=False)
+    if unread_notifications.exists():
+        unread_notifications.update(is_read=True)
+        
+    return render(request, 'notifications.html', {'notifications': notifications_list})

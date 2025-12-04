@@ -1,0 +1,58 @@
+{% extends 'base.html' %}
+
+{% block title %}Bildirimler{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="d-flex justify-content-between align-items-center mb-4 border-bottom border-secondary pb-2">
+                <h4 class="text-white mb-0"><i class="fas fa-bell text-warning me-2"></i> Bildirimler</h4>
+            </div>
+
+            <div class="list-group">
+                {% for notification in notifications %}
+                <a href="{% url 'profile' notification.sender.username %}" class="list-group-item list-group-item-action d-flex align-items-center p-3 mb-2 rounded border border-secondary {% if not notification.is_read %}bg-input border-start border-5 border-start-warning{% else %}bg-card{% endif %}">
+                    <div class="position-relative">
+                        <img src="{% if notification.sender.profile.avatar %}{{ notification.sender.profile.avatar.url }}{% else %}/media/avatars/usericon.png{% endif %}" 
+                             class="rounded-circle me-3" width="50" height="50" style="object-fit: cover;" onerror="this.src='/media/avatars/usericon.png'">
+                        {% if not notification.is_read %}
+                        <span class="position-absolute top-0 start-100 translate-middle p-1 bg-danger border border-light rounded-circle">
+                            <span class="visually-hidden">Yeni bildirim</span>
+                        </span>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between align-items-center mb-1">
+                            <strong class="text-white">{{ notification.sender.username }}</strong>
+                            <small class="text-muted">{{ notification.created_at|timesince }} önce</small>
+                        </div>
+                        <p class="mb-0 text-muted small">
+                            {% if notification.notification_type == 'FOLLOW' %}
+                                <span class="text-info"><i class="fas fa-user-plus"></i></span> seni takip etmeye başladı.
+                            {% elif notification.notification_type == 'LIKE' %}
+                                <span class="text-danger"><i class="fas fa-heart"></i></span> bir gönderini beğendi.
+                            {% elif notification.notification_type == 'COMMENT' %}
+                                <span class="text-success"><i class="fas fa-comment"></i></span> bir gönderine yorum yaptı.
+                            {% endif %}
+                        </p>
+                    </div>
+                    
+                    {% if not notification.is_read %}
+                    <div class="ms-3">
+                        <span class="badge bg-warning text-dark">YENİ</span>
+                    </div>
+                    {% endif %}
+                </a>
+                {% empty %}
+                <div class="text-center py-5">
+                    <i class="fas fa-bell-slash fa-3x text-muted mb-3"></i>
+                    <p class="text-muted">Henüz hiç bildiriminiz yok.</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

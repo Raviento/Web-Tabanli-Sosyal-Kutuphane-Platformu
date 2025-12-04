@@ -73,7 +73,11 @@
         }
 
         function toggleLike(activityId, btn) {
-            fetch(`/activity/like/${activityId}/`)
+            fetch(`/activity/like/${activityId}/`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
                 .then(response => response.json())
                 .then(data => {
                     if (data.status === 'liked') {

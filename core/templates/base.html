@@ -140,6 +140,22 @@
             color: #fff;
         }
         
+        /* Dropdown Menu Dark Mode Fix */
+        .dropdown-menu {
+            background-color: var(--bg-card) !important;
+            border-color: var(--border-color) !important;
+        }
+        .dropdown-item {
+            color: var(--text-primary) !important;
+        }
+        .dropdown-item:hover, .dropdown-item:focus {
+            background-color: #2c3440 !important;
+            color: #fff !important;
+        }
+        .dropdown-divider {
+            border-top-color: var(--border-color) !important;
+        }
+        
         /* Utility Classes */
         .bg-input { background-color: var(--bg-input) !important; }
         .bg-card { background-color: var(--bg-card) !important; }
@@ -212,6 +228,49 @@
                 <!-- Sağ Menü (Kullanıcı İşlemleri) -->
                 <ul class="navbar-nav align-items-center">
                     {% if user.is_authenticated %}
+                        <!-- Bildirimler -->
+                        <li class="nav-item dropdown me-3">
+                            <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                <i class="fas fa-bell fa-lg"></i>
+                                {% if unread_notification_count > 0 %}
+                                    <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.6rem;">
+                                        {{ unread_notification_count }}
+                                    </span>
+                                {% endif %}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end bg-card border-secondary shadow-lg" aria-labelledby="notificationDropdown" style="width: 300px; max-height: 400px; overflow-y: auto;">
+                                <li class="dropdown-header text-white border-bottom border-secondary">Bildirimler</li>
+                                {% if notifications %}
+                                    {% for notification in notifications %}
+                                        <li>
+                                            <a class="dropdown-item text-white-50 hover-bg-dark py-2 border-bottom border-secondary" href="{% url 'profile' notification.sender.username %}">
+                                                <div class="d-flex align-items-center">
+                                                    <img src="{% if notification.sender.profile.avatar %}{{ notification.sender.profile.avatar.url }}{% else %}/media/avatars/usericon.png{% endif %}" 
+                                                         class="rounded-circle me-2" width="30" height="30" style="object-fit: cover;" onerror="this.src='/media/avatars/usericon.png'">
+                                                    <div class="small">
+                                                        <strong class="text-white">{{ notification.sender.username }}</strong>
+                                                        {% if notification.notification_type == 'FOLLOW' %}
+                                                            seni takip etmeye başladı.
+                                                        {% elif notification.notification_type == 'LIKE' %}
+                                                            bir gönderini beğendi.
+                                                        {% elif notification.notification_type == 'COMMENT' %}
+                                                            bir gönderine yorum yaptı.
+                                                        {% endif %}
+                                                        <br>
+                                                        <span class="text-muted x-small">{{ notification.created_at|timesince }} önce</span>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </li>
+                                    {% endfor %}
+                                {% else %}
+                                    <li><span class="dropdown-item text-muted small py-3 text-center">Yeni bildirim yok.</span></li>
+                                {% endif %}
+                                <li><hr class="dropdown-divider bg-secondary"></li>
+                                <li><a class="dropdown-item text-center text-muted small py-2" href="{% url 'notifications_page' %}">Tümünü Gör</a></li>
+                            </ul>
+                        </li>
+
                         <li class="nav-item me-3">
                             <a href="{% url 'profile' user.username %}" class="text-white text-decoration-none d-flex align-items-center">
                                 {% if user.profile.avatar %}

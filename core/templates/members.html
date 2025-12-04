@@ -129,8 +129,12 @@
                                     </div>
                                 {% endif %}
                                 
-                                <div class="ms-auto text-danger">
-                                    <i class="fas fa-heart"></i> {{ activity.like_count }}
+                                <div class="ms-auto">
+                                    <button class="btn btn-sm {% if activity.is_liked %}btn-danger text-white{% else %}btn-outline-secondary text-muted{% endif %}" 
+                                            onclick="toggleLike('{{ activity.id }}', this)">
+                                        <i class="{% if activity.is_liked %}fas{% else %}far{% endif %} fa-heart"></i> 
+                                        <span class="like-count">{{ activity.like_count }}</span>
+                                    </button>
                                 </div>
                             </div>
                         </div>
@@ -156,7 +160,11 @@
                                          onerror="this.src='/media/avatars/usericon.png'">
                                     <small class="fw-bold text-white">{{ activity.user.username }}</small>
                                 </div>
-                                <span class="badge bg-danger"><i class="fas fa-heart"></i> {{ activity.like_count }}</span>
+                                <button class="btn btn-sm {% if activity.is_liked %}btn-danger text-white{% else %}btn-outline-secondary text-muted{% endif %}" 
+                                        onclick="toggleLike('{{ activity.id }}', this)">
+                                    <i class="{% if activity.is_liked %}fas{% else %}far{% endif %} fa-heart"></i> 
+                                    <span class="like-count">{{ activity.like_count }}</span>
+                                </button>
                             </div>
                             
                             <p class="small text-muted mb-2">
@@ -213,6 +221,73 @@
 </div>
 
 <script>
+    function toggleLike(activityId, btn) {
+        // Optimistic UI Update (Hemen güncelle, hata olursa geri al)
+        const icon = btn.querySelector('i');
+        const countSpan = btn.querySelector('.like-count');
+        let currentCount = parseInt(countSpan.textContent);
+        const isLiked = btn.classList.contains('btn-danger');
+
+        // Anlık değişim
+        if (isLiked) {
+            // Beğeniyi geri al
+            btn.classList.remove('btn-danger', 'text-white');
+            btn.classList.add('btn-outline-secondary', 'text-muted');
+            icon.classList.remove('fas');
+            icon.classList.add('far');
+            countSpan.textContent = Math.max(0, currentCount - 1);
+        } else {
+            // Beğen
+            btn.classList.remove('btn-outline-secondary', 'text-muted');
+            btn.classList.add('btn-danger', 'text-white');
+            icon.classList.remove('far');
+            icon.classList.add('fas');
+            countSpan.textContent = currentCount + 1;
+        }
+
+        fetch(`/activity/like/${activityId}/`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        })
+            .then(response => {
+                if (!response.ok) { throw new Error('Network response was not ok'); }
+                return response.json();
+            })
+            .then(data => {
+                // Sunucudan gelen kesin veriyle güncelle (Senkronizasyon)
+                if (data.status === 'liked') {
+                    btn.classList.remove('btn-outline-secondary', 'text-muted');
+                    btn.classList.add('btn-danger', 'text-white');
+                    icon.classList.remove('far');
+                    icon.classList.add('fas');
+                } else {
+                    btn.classList.remove('btn-danger', 'text-white');
+                    btn.classList.add('btn-outline-secondary', 'text-muted');
+                    icon.classList.remove('fas');
+                    icon.classList.add('far');
+                }
+                countSpan.textContent = data.like_count;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                // Hata durumunda eski haline döndür (Rollback)
+                if (isLiked) {
+                    btn.classList.add('btn-danger', 'text-white');
+                    btn.classList.remove('btn-outline-secondary', 'text-muted');
+                    icon.classList.add('fas');
+                    icon.classList.remove('far');
+                    countSpan.textContent = currentCount;
+                } else {
+                    btn.classList.add('btn-outline-secondary', 'text-muted');
+                    btn.classList.remove('btn-danger', 'text-white');
+                    icon.classList.add('far');
+                    icon.classList.remove('fas');
+                    countSpan.textContent = currentCount;
+                }
+            });
+    }
+
     // Tab switching logic for custom styled tabs
     document.querySelectorAll('#membersTab button').forEach(button => {
         button.addEventListener('click', function() {

@@ -24,6 +24,17 @@ class Movie(models.Model):
     def __str__(self):
         return self.title
 
+class TVSeries(models.Model):
+    tmdb_id = models.IntegerField(unique=True)
+    title = models.CharField(max_length=255)
+    overview = models.TextField(blank=True)
+    poster_path = models.CharField(max_length=255, blank=True)
+    first_air_date = models.DateField(null=True, blank=True)
+    vote_average = models.FloatField(default=0)
+
+    def __str__(self):
+        return self.title
+
 class Book(models.Model):
     google_id = models.CharField(max_length=255, unique=True)
     title = models.CharField(max_length=500) 
@@ -92,6 +103,22 @@ class ActivityComment(models.Model):
     activity = models.ForeignKey(Activity, on_delete=models.CASCADE, related_name='comments')
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+
+class Notification(models.Model):
+    NOTIFICATION_TYPES = (
+        ('FOLLOW', 'Takip'),
+        ('LIKE', 'Beğeni'),
+        ('COMMENT', 'Yorum'),
+    )
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name='notifications')
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name='sent_notifications')
+    notification_type = models.CharField(max_length=20, choices=NOTIFICATION_TYPES)
+    activity = models.ForeignKey(Activity, on_delete=models.CASCADE, null=True, blank=True)
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
 
 # --- 5. LİSTELER (PDF: 2.1.4 & 2.1.5 - EKSİK OLAN KISIM) ---
 class UserList(models.Model):

@@ -11,7 +11,7 @@ from core.views import (
     create_custom_list, list_detail, remove_follower,
     add_rating, add_review, delete_review, edit_review,
     like_activity, add_activity_comment, share_activity,
-    movies_page, books_page, members_page, search_page, explore, filter_content # YENİ
+    movies_page, books_page, members_page, search_page, explore, filter_content, notifications_page # YENİ
 )
 
 # API Router
@@ -33,10 +33,10 @@ urlpatterns = [
     path('logout/', logout_view, name='logout'),
     
     # Şifre Sıfırlama
-    path('password-reset/', auth_views.PasswordResetView.as_view(template_name='password_reset_form.html'), name='password_reset'),
+    path('password-reset/', auth_views.PasswordResetView.as_view(template_name='password_reset_form.html', email_template_name='password_reset_email.html'), name='password_reset'),
     path('password-reset/done/', auth_views.PasswordResetDoneView.as_view(template_name='password_reset_done.html'), name='password_reset_done'),
-    path('password-reset-confirm/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='password_reset_confirm.html'), name='password_reset_confirm'),
-    path('password-reset-complete/', auth_views.PasswordResetCompleteView.as_view(template_name='password_reset_complete.html'), name='password_reset_complete'),
+    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(template_name='password_reset_confirm.html'), name='password_reset_confirm'),
+    path('reset/done/', auth_views.PasswordResetCompleteView.as_view(template_name='password_reset_complete.html'), name='password_reset_complete'),
 
     path('movie/<int:tmdb_id>/', movie_detail, name='movie_detail'),
     path('book/<str:google_id>/', book_detail, name='book_detail'),
@@ -61,11 +61,8 @@ urlpatterns = [
     path('activity/comment/<int:activity_id>/', add_activity_comment, name='add_activity_comment'),
     path('activity/share/<int:activity_id>/', share_activity, name='share_activity'),
 
-    # Şifre Sıfırlama
-    path('reset_password/', auth_views.PasswordResetView.as_view(), name='reset_password'),
-    path('reset_password_sent/', auth_views.PasswordResetDoneView.as_view(), name='password_reset_done'),
-    path('reset/<uidb64>/<token>/', auth_views.PasswordResetConfirmView.as_view(), name='password_reset_confirm'),
-    path('reset_password_complete/', auth_views.PasswordResetCompleteView.as_view(), name='password_reset_complete'),
+    # Bildirimler
+    path('notifications/', notifications_page, name='notifications_page'),
 
     path('admin/', admin.site.urls),
     path('api/', include(router.urls)),
