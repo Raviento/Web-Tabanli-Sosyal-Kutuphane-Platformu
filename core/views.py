@@ -10,12 +10,14 @@ from django.db.models import Avg, Count
 from rest_framework import viewsets, permissions
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from .models import Movie, Book, Activity, UserList, Profile, Rating, Review, ActivityLike, ActivityComment
+from .models import Movie, Book, Activity, UserList, Profile, Rating, Review, ActivityLike, ActivityComment, TVSeries
 from .serializers import MovieSerializer, BookSerializer, ActivitySerializer
 from .services import (
     search_content_service, get_movie_detail_service, get_book_detail_service,
     get_popular_movies, get_top_rated_movies, get_movie_genres, get_movies_by_genre,
-    get_books_by_category, discover_movies
+    get_books_by_category, discover_movies,
+    get_popular_tv_series, get_top_rated_tv_series, get_tv_series_detail_service,
+    get_tv_genres, get_tv_series_by_genre
 )
 from .forms import ProfileUpdateForm
 
@@ -63,6 +65,22 @@ class SearchView(APIView):
                 'original_release_date': movie.get('release_date')
             })
 
+        # Dizileri formatla
+        for tv in raw_results.get('tv_series', []):
+            if not tv.get('name'): continue # TV dizilerinde title yerine name kullanılır
+            
+            year = tv.get('first_air_date', '')[:4] if tv.get('first_air_date') else ''
+            
+            formatted_results.append({
+                'type': 'tv',
+                'id': tv.get('id'),
+                'title': tv.get('name'),
+                'image': f"https://image.tmdb.org/t/p/w500{tv.get('poster_path')}" if tv.get('poster_path') else None,
+                'poster_path': tv.get('poster_path'),
+                'subtitle': f"Dizi | {year}",
+                'original_release_date': tv.get('first_air_date')
+            })
+
         # Kitapları formatla
         for book in raw_results.get('books', []):
             if not book.get('title'): continue
@@ -87,15 +105,12 @@ class SearchView(APIView):
             })
 
         # Frontend (index.html) ayrı ayrı array'ler bekliyor olabilir.
-        # Ancak list_detail.html tek bir 'results' array'i bekliyor.
-        # index.html'deki JS koduna baktığımızda: data.users, data.movies, data.books bekliyor.
-        # Ama SearchView sadece 'results' dönüyor.
-        
-        # ÇÖZÜM: Hem 'results' (tek liste) hem de ayrı ayrı listeler dönelim.
+        # Hem 'results' (tek liste) hem de ayrı ayrı listeler dönelim.
         
         response_data = {
             'results': formatted_results,
             'movies': [r for r in formatted_results if r['type'] == 'movie'],
+            'tv_series': [r for r in formatted_results if r['type'] == 'tv'],
             'books': [r for r in formatted_results if r['type'] == 'book'],
             'users': [r for r in formatted_results if r['type'] == 'user']
         }
@@ -162,25 +177,22 @@ def get_platform_popular_books():
 
 # --- FRONTEND VIEWS ---
 def explore(request):
-    # Keşfet Sayfası: Takip edilen/edilmeyen herkesin aktiviteleri (Kullanıcının kendisi hariç)
+    # Keşfet Sayfası: Takip edilen/edilmeyen herkesin aktiviteleri
     if request.user.is_authenticated:
         activity_list = Activity.objects.exclude(user=request.user).select_related('user', 'user__profile', 'movie', 'book').order_by('-created_at')
     else:
         activity_list = Activity.objects.select_related('user', 'user__profile', 'movie', 'book').all().order_by('-created_at')
     
-    # Sayfalandırma
     paginator = Paginator(activity_list, 10) 
     page_number = request.GET.get('page')
     activities = paginator.get_page(page_number)
 
-    # Beğeni ve Yorumları Yükle
     for activity in activities:
         activity.like_count = activity.likes.count()
         activity.comment_list = activity.comments.select_related('user', 'user__profile').order_by('created_at')
         if request.user.is_authenticated:
             activity.is_liked = activity.likes.filter(user=request.user).exists()
             
-            # Paylaşım Durumu Kontrolü
             target_id = activity.original_activity.id if activity.action_type == 'SHARED' else activity.id
             activity.is_shared = Activity.objects.filter(
                 user=request.user, 
@@ -199,16 +211,14 @@ def explore(request):
             'next_page_number': activities.next_page_number() if activities.has_next() else None
         })
     
-    # Vitrin Verileri - AYRI AYRI
-    # 1. Platform Verileri
+    # Vitrin Verileri
     platform_popular_movies = get_platform_popular_movies()
     platform_top_rated_movies = get_platform_top_rated_movies()
     platform_popular_books = get_platform_popular_books()
     
-    # 2. API Verileri (Global)
     api_popular_movies = get_popular_movies()[:6]
     api_top_rated_movies = get_top_rated_movies()[:6]
-    api_popular_books = get_books_by_category("subject:fiction")[:6] # Global kitaplar için proxy
+    api_popular_books = get_books_by_category("subject:fiction")[:6]
     
     genres = get_movie_genres()
             
@@ -226,9 +236,6 @@ def explore(request):
     return render(request, 'explore.html', context)
 
 def filter_content(request):
-    """
-    Keşfet sayfasındaki gelişmiş filtreleme için AJAX endpoint.
-    """
     content_type = request.GET.get('type', 'movie')
     genre_id = request.GET.get('genre')
     year = request.GET.get('year')
@@ -239,41 +246,32 @@ def filter_content(request):
     if content_type == 'movie':
         results = discover_movies(genre_id=genre_id, year=year, min_score=min_score)
     elif content_type == 'book':
-        # Kitaplar için şimdilik sadece kategori (genre) bazlı arama yapıyoruz
-        # Google Books API filtreleme konusunda kısıtlı
         query = f"subject:{genre_id}" if genre_id else "subject:fiction"
         results = get_books_by_category(query)
         
-    # Sonuçları HTML olarak döndür
     html = render_to_string('partials/filter_results.html', {'results': results, 'type': content_type})
     return JsonResponse({'html': html})
 
 def index(request):
     if request.user.is_authenticated:
-        # Kullanıcının takip ettiği kişileri bul
         profile, _ = Profile.objects.get_or_create(user=request.user)
         following_profiles = profile.following.all()
         following_users = [p.user for p in following_profiles]
         
-        # SADECE Takip edilenlerin aktiviteleri (Zaman Tüneli)
         activity_list = Activity.objects.filter(user__in=following_users).select_related('user', 'user__profile', 'movie', 'book').order_by('-created_at')
     else:
-        # Giriş yapmamışsa genel akış
         activity_list = Activity.objects.select_related('user', 'user__profile', 'movie', 'book').all().order_by('-created_at')
     
-    # Sayfalandırma (Her sayfada 10 aktivite)
     paginator = Paginator(activity_list, 10) 
     page_number = request.GET.get('page')
     activities = paginator.get_page(page_number)
 
-    # Beğeni ve Yorumları Yükle
     for activity in activities:
         activity.like_count = activity.likes.count()
         activity.comment_list = activity.comments.select_related('user', 'user__profile').order_by('created_at')
         if request.user.is_authenticated:
             activity.is_liked = activity.likes.filter(user=request.user).exists()
             
-            # Paylaşım Durumu Kontrolü
             target_id = activity.original_activity.id if activity.action_type == 'SHARED' else activity.id
             activity.is_shared = Activity.objects.filter(
                 user=request.user, 
@@ -396,26 +394,11 @@ def add_rating(request):
         target_id = request.POST.get('target_id') # API ID
         score = int(request.POST.get('score'))
         
-        # Önce nesneyi bul veya oluştur (MovieInteractionView mantığıyla)
-        # Ancak burada basitlik için nesnenin zaten var olduğunu veya 
-        # MovieInteractionView üzerinden eklendiğini varsayabiliriz.
-        # VEYA burada da get_or_create yapabiliriz.
-        
         target_obj = None
         if target_type == 'movie':
-            # Detay sayfasından geldiği için temel verileri alabiliriz
-            # Ama en garantisi DB'den çekmek, yoksa oluşturmak
-            # Burada basitleştirilmiş bir yaklaşım izleyeceğiz:
-            # Kullanıcı puan veriyorsa, film DB'de olmalı. 
-            # Eğer yoksa, önce listeye ekleme işlemi yapılmalı veya burada create edilmeli.
-            # Pratik çözüm: MovieInteractionView'daki create mantığını buraya taşımak veya çağırmak.
-            # Şimdilik DB'de varsa işlem yapalım.
             try:
                 target_obj = Movie.objects.get(tmdb_id=target_id)
             except Movie.DoesNotExist:
-                # Film DB'de yoksa, puan verilemez (önce listeye eklenmeli veya detayları kaydedilmeli)
-                # Ancak kullanıcı deneyimi için burada oluşturmak daha iyi.
-                # Gerekli veriler POST ile gelmeli.
                 pass
                 
         elif target_type == 'book':
@@ -432,10 +415,6 @@ def add_rating(request):
                 defaults={'score': score}
             )
             
-            # Aktivite oluştur veya güncelle
-            # Eğer aynı içerik için daha önce 'RATED' aktivitesi varsa, onu güncelle (tarihini yenile)
-            # Yoksa yeni oluştur.
-            
             activity, activity_created = Activity.objects.update_or_create(
                 user=request.user,
                 action_type='RATED',
@@ -443,12 +422,6 @@ def add_rating(request):
                 book=target_obj if target_type == 'book' else None,
                 defaults={'related_rating': rating}
             )
-            
-            # Eğer aktivite zaten varsa, created_at alanını güncellemek için save() çağırabiliriz
-            # Ancak auto_now_add=True olduğu için created_at değişmeyebilir.
-            # Bu yüzden manuel olarak güncellememiz gerekebilir veya modelde auto_now=True kullanmalıyız.
-            # Veya basitçe: eskiyi silip yenisini oluşturmak da bir yöntem ama ID değişir.
-            # En temiz yöntem: created_at'i manuel güncellemek.
             
             if not activity_created:
                 from django.utils import timezone
@@ -515,7 +488,7 @@ def edit_review(request, review_id):
             messages.error(request, 'Yorum boş olamaz.')
     return redirect(request.META.get('HTTP_REFERER', 'home'))
 
-# --- INTERACTION API (HEM FILM HEM KITAP) ---
+# --- INTERACTION API ---
 class MovieInteractionView(APIView):
     permission_classes = [permissions.IsAuthenticated]
 
@@ -530,21 +503,18 @@ class MovieInteractionView(APIView):
         book_data = data.get('book_data')
         target_object = None
 
-        # 1. SİLME İŞLEMİ İÇİN ÖZEL DURUM (DB ID ile)
+        # 1. Silme işlemi için özel durum (DB ID ile)
         if action == 'remove_from_list' and data.get('target_id'):
             try:
-                # target_id burada veritabanı ID'si (PK) olmalı
                 if target_type == 'movie':
                     target_object = Movie.objects.get(id=data.get('target_id'))
                 elif target_type == 'book':
                     target_object = Book.objects.get(id=data.get('target_id'))
             except (Movie.DoesNotExist, Book.DoesNotExist, ValueError):
-                # Bulunamazsa devam et (Belki API ID gönderilmiştir)
                 pass
 
-        # 2. EĞER HALA YOKSA, VERİDEN OLUŞTUR VEYA BUL
+        # 2. Eğer hala yoksa, veriden oluştur veya bul
         if not target_object:
-            # FormData'dan gelen düz veriyi yapılandır
             if not movie_data and target_type == 'movie':
                 movie_data = {
                     'id': data.get('target_id'), # API ID
@@ -565,14 +535,13 @@ class MovieInteractionView(APIView):
                     'page_count': data.get('page_count')
                 }
 
-            # FİLM KAYDETME / BULMA
+            # Film Kaydetme / Bulma
             if movie_data and movie_data.get('id'):
                 try:
                     vote_avg = float(str(movie_data.get('vote_average', 0)).replace(',', '.'))
                 except:
                     vote_avg = 0
                 
-                # Tarih formatını kontrol et
                 release_date = movie_data.get('release_date')
                 if release_date:
                     if len(release_date) == 4: # Sadece yıl geldiyse
@@ -594,7 +563,7 @@ class MovieInteractionView(APIView):
                 )
                 target_object = movie
 
-            # KİTAP KAYDETME / BULMA
+            # Kitap Kaydetme / Bulma
             elif book_data and book_data.get('google_id'):
                 authors_str = book_data.get('authors') or ''
                 if isinstance(authors_str, list): authors_str = ", ".join(authors_str)
@@ -713,17 +682,14 @@ def profile_view(request, username):
     read_list = UserList.objects.filter(user=user, list_type='read').first()
     readlist = UserList.objects.filter(user=user, list_type='readlist').first()
     
-    # Özel Listeler
     custom_lists = UserList.objects.filter(user=user, list_type='custom')
     
-    # Son Aktiviteler (Yorumlar, Puanlar ve Liste Ekleme)
-    # Tekrarları önlemek için Python tarafında filtreleme yapıyoruz
+    # Son Aktiviteler
     all_activities = Activity.objects.filter(user=user, action_type__in=['RATED', 'REVIEWED', 'ADDED_LIST', 'COMMENTED']).order_by('-created_at')
     recent_activities_data = []
     seen_items_for_non_reviews = set()
     
     for activity in all_activities:
-        # Aktivitenin ait olduğu öğeyi belirle (Film veya Kitap ID)
         item_key = None
         if activity.movie:
             item_key = f"movie_{activity.movie.id}"
@@ -732,14 +698,11 @@ def profile_view(request, username):
         else:
             continue
             
-        # EĞER AKTİVİTE BİR İNCELEME VEYA YORUM İSE: Her zaman göster
         if activity.action_type in ['REVIEWED', 'COMMENTED']:
-            # Puan bilgisini bul
             score = None
             if activity.related_rating:
                 score = activity.related_rating.score
             else:
-                # İncelemeye bağlı puan yoksa genel puanı bul
                 if activity.movie:
                     r = Rating.objects.filter(user=user, movie=activity.movie).first()
                     if r: score = r.score
@@ -751,11 +714,8 @@ def profile_view(request, username):
                 'activity': activity,
                 'score': score
             })
-            # Yorum veya inceleme yapıldıysa, bu filmle ilgili sadece puanlama aktivitesini gizle
             seen_items_for_non_reviews.add(item_key)
 
-        # EĞER AKTİVİTE PUANLAMA VEYA LİSTE EKLEME İSE:
-        # Daha önce bu filmle ilgili bir aktivite (yorum veya daha güncel bir puan) gösterildiyse atla.
         elif item_key not in seen_items_for_non_reviews:
             score = None
             if activity.action_type == 'RATED' and activity.related_rating:
@@ -777,7 +737,6 @@ def profile_view(request, username):
         if len(recent_activities_data) >= 10:
             break
 
-    # İstatistikler
     stats = {
         'films_count': Activity.objects.filter(user=user, movie__isnull=False).count(),
         'books_count': Activity.objects.filter(user=user, book__isnull=False).count(),
@@ -785,8 +744,7 @@ def profile_view(request, username):
         'reviews_count': Activity.objects.filter(user=user, action_type='REVIEWED').count(),
     }
 
-    # Favori Filmler (Şimdilik en yüksek puanlı son 4 film)
-    # Tekrarları önlemek için Python tarafında filtreleme
+    # Favori Filmler
     all_rated_movies = Activity.objects.filter(user=user, movie__isnull=False, action_type='RATED') \
         .order_by('-related_rating__score', '-created_at')
     
@@ -803,7 +761,6 @@ def profile_view(request, username):
 
     is_following = False
     if request.user.is_authenticated and request.user != user:
-        # Giriş yapan kullanıcının profili, görüntülenen profili takip ediyor mu?
         current_user_profile, _ = Profile.objects.get_or_create(user=request.user)
         is_following = current_user_profile.following.filter(id=profile.id).exists()
 
@@ -863,10 +820,18 @@ def edit_profile_view(request):
     if request.method == 'POST':
         form = ProfileUpdateForm(request.POST, request.FILES, instance=profile)
         if form.is_valid():
+            # Kullanıcı adını güncelle
+            new_username = form.cleaned_data.get('username')
+            if new_username and new_username != request.user.username:
+                request.user.username = new_username
+                request.user.save()
+            
             form.save()
+            messages.success(request, 'Profiliniz güncellendi.')
             return redirect('profile', username=request.user.username)
     else:
-        form = ProfileUpdateForm(instance=profile)
+        # Formu açarken mevcut kullanıcı adını doldur
+        form = ProfileUpdateForm(instance=profile, initial={'username': request.user.username})
     return render(request, 'edit_profile.html', {'form': form})
 
 @login_required
@@ -988,6 +953,63 @@ def movies_page(request):
     }
     return render(request, 'movies.html', context)
 
+def tv_series_page(request):
+    genre_id = request.GET.get('genre')
+    genres = get_tv_genres()
+    
+    if genre_id:
+        tv_series = get_tv_series_by_genre(genre_id)
+        title = next((g['name'] for g in genres if str(g['id']) == genre_id), "Diziler")
+    else:
+        tv_series = get_popular_tv_series()
+        title = "Popüler Diziler"
+    
+    # Local Top Rated TV Series
+    local_top_series = TVSeries.objects.annotate(
+        avg_rating=Avg('rating__score'), 
+        count=Count('rating')
+    ).filter(count__gt=0).order_by('-avg_rating')[:5]
+
+    context = {
+        'tv_series': tv_series,
+        'genres': genres,
+        'title': title,
+        'local_top_series': local_top_series,
+        'is_genre_selected': bool(genre_id)
+    }
+    return render(request, 'tv_series.html', context)
+
+def tv_series_detail(request, tmdb_id):
+    tv_data = get_tv_series_detail_service(tmdb_id)
+    if not tv_data:
+        return redirect('index')
+
+    tv_obj = TVSeries.objects.filter(tmdb_id=tmdb_id).first()
+    
+    reviews = []
+    user_rating = None
+    avg_rating = None # Varsayılan olarak None (Platform puanı yoksa - görünmesi için)
+    
+    if tv_obj:
+        reviews = Review.objects.filter(tv_series=tv_obj).select_related('user', 'user__profile').order_by('-created_at')
+        if request.user.is_authenticated:
+            rating_obj = Rating.objects.filter(user=request.user, tv_series=tv_obj).first()
+            if rating_obj:
+                user_rating = rating_obj.score
+        
+        local_avg = Rating.objects.filter(tv_series=tv_obj).aggregate(Avg('score'))['score__avg']
+        if local_avg:
+            avg_rating = local_avg
+
+    context = {
+        'tv': tv_data,
+        'tv_obj': tv_obj,
+        'reviews': reviews,
+        'user_rating': user_rating,
+        'avg_rating': avg_rating,
+    }
+    return render(request, 'tv_series_detail.html', context)
+
 def books_page(request):
     category = request.GET.get('category', 'fiction')
     # Google Books API için kategori eşleştirmeleri
@@ -1040,17 +1062,13 @@ def books_page(request):
     return render(request, 'books.html', context)
 
 def members_page(request):
-    # En Aktif Üyeler (Admin hariç)
     active_users = User.objects.filter(is_superuser=False).annotate(activity_count=Count('activities')).order_by('-activity_count')[:12]
     
-    # Her üye için son 4 aktivite görselini ve istatistikleri al
     for user in active_users:
-        # İstatistikler
         user.movie_count = Activity.objects.filter(user=user, movie__isnull=False).count()
         user.book_count = Activity.objects.filter(user=user, book__isnull=False).count()
         user.review_count = Activity.objects.filter(user=user, action_type='REVIEWED').count()
         
-        # Son 4 benzersiz içerik görseli
         recent_activities = Activity.objects.filter(user=user).select_related('movie', 'book').order_by('-created_at')
         
         recent_items = []
@@ -1086,17 +1104,14 @@ def members_page(request):
         
         user.recent_items = recent_items
 
-    # Popüler İncelemeler (En çok beğenilen yorum aktiviteleri)
     popular_reviews = Activity.objects.filter(action_type='REVIEWED', user__is_superuser=False) \
         .exclude(related_review__isnull=True) \
         .exclude(related_review__text='') \
         .annotate(like_count=Count('likes')) \
         .order_by('-like_count')[:6]
     
-    # Genel Popüler Paylaşımlar (En çok beğenilen her türlü aktivite)
     popular_activities = Activity.objects.filter(user__is_superuser=False).annotate(like_count=Count('likes')).filter(like_count__gt=0).order_by('-like_count')[:6]
 
-    # Beğeni durumlarını kontrol et
     if request.user.is_authenticated:
         for activity in popular_reviews:
             activity.is_liked = activity.likes.filter(user=request.user).exists()
@@ -1122,19 +1137,167 @@ def search_page(request):
 
 @login_required
 def notifications_page(request):
-    # Tüm bildirimleri al
     notifications = request.user.notifications.all().select_related('sender', 'sender__profile', 'activity')
     
-    # Okunmamış bildirimleri işaretlemek için bir kopyasını al (template'de kullanmak için)
-    # Not: Queryset evaluate edildiğinde veritabanına gider, bu yüzden listeye çevirip işlem yapabiliriz
-    # Ancak sayfalama vs. yoksa direkt update yapmak daha performanslıdır.
-    # Burada kullanıcının "Yeni" ibaresini görmesi için önce listeyi çekiyoruz, sonra update ediyoruz.
-    
+    # Template'de "Yeni" ibaresini göstermek için önce listeyi alıyoruz
     notifications_list = list(notifications)
     
-    # Sayfaya girildiği an tüm okunmamışları okundu olarak işaretle
     unread_notifications = request.user.notifications.filter(is_read=False)
     if unread_notifications.exists():
         unread_notifications.update(is_read=True)
         
     return render(request, 'notifications.html', {'notifications': notifications_list})
+
+def lists_page(request):
+    lists = UserList.objects.filter(list_type='custom').annotate(
+        like_count=Count('likes')
+    ).order_by('-like_count')
+    
+    for lst in lists:
+        preview_items = []
+        
+        for m in lst.movies.all()[:5]:
+            if m.poster_path:
+                preview_items.append(f"https://image.tmdb.org/t/p/w154{m.poster_path}")
+        
+        if len(preview_items) < 5:
+            remaining = 5 - len(preview_items)
+            for t in lst.tv_series.all()[:remaining]:
+                if t.poster_path:
+                    preview_items.append(f"https://image.tmdb.org/t/p/w154{t.poster_path}")
+                    
+        if len(preview_items) < 5:
+            remaining = 5 - len(preview_items)
+            for b in lst.books.all()[:remaining]:
+                if b.cover_path:
+                    preview_items.append(b.cover_path)
+        
+        while len(preview_items) < 5:
+            preview_items.append(None)
+                    
+        lst.preview_images = preview_items
+        lst.is_liked = request.user.is_authenticated and lst.likes.filter(id=request.user.id).exists()
+
+    return render(request, 'lists.html', {'lists': lists})
+
+@login_required
+def like_list(request, list_id):
+    user_list = get_object_or_404(UserList, id=list_id)
+    if user_list.likes.filter(id=request.user.id).exists():
+        user_list.likes.remove(request.user)
+        liked = False
+    else:
+        user_list.likes.add(request.user)
+        liked = True
+        
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'liked' if liked else 'unliked', 'like_count': user_list.likes.count()})
+        
+    return redirect(request.META.get('HTTP_REFERER', 'lists_page'))
+
+@login_required
+def add_item_to_list(request, list_id, item_type, item_id):
+    user_list = get_object_or_404(UserList, id=list_id, user=request.user)
+    
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
+
+    try:
+        if item_type == 'movie':
+            # Önce DB'de var mı bak
+            movie = Movie.objects.filter(tmdb_id=item_id).first()
+            if not movie:
+                # Yoksa TMDB'den çek ve kaydet
+                details = get_movie_detail_service(item_id)
+                if details:
+                    release_date = details.get('release_date')
+                    if not release_date: release_date = None
+                    
+                    movie = Movie.objects.create(
+                        tmdb_id=details['id'],
+                        title=details['title'],
+                        overview=details.get('overview', ''),
+                        poster_path=details.get('poster_path', ''),
+                        release_date=release_date,
+                        vote_average=details.get('vote_average', 0)
+                    )
+            
+            if movie:
+                user_list.movies.add(movie)
+                return JsonResponse({'status': 'success'})
+                
+        elif item_type == 'tv':
+            # Önce DB'de var mı bak
+            tv = TVSeries.objects.filter(tmdb_id=item_id).first()
+            if not tv:
+                # Yoksa TMDB'den çek ve kaydet
+                details = get_tv_series_detail_service(item_id)
+                if details:
+                    first_air_date = details.get('first_air_date')
+                    if not first_air_date: first_air_date = None
+                    
+                    tv = TVSeries.objects.create(
+                        tmdb_id=details['id'],
+                        title=details['name'],
+                        overview=details.get('overview', ''),
+                        poster_path=details.get('poster_path', ''),
+                        first_air_date=first_air_date,
+                        vote_average=details.get('vote_average', 0)
+                    )
+            
+            if tv:
+                user_list.tv_series.add(tv)
+                return JsonResponse({'status': 'success'})
+
+        elif item_type == 'book':
+            book = Book.objects.filter(google_id=item_id).first()
+            if not book:
+                details = get_book_detail_service(item_id)
+                if details:
+                    info = details.get('volumeInfo', {})
+                    authors = ", ".join(info.get('authors', [])) if info.get('authors') else "Yazar Bilinmiyor"
+                    cover = f"https://books.google.com/books/content?id={details['id']}&printsec=frontcover&img=1&zoom=1&h=1000&source=gbs_api"
+                    
+                    book = Book.objects.create(
+                        google_id=details['id'],
+                        title=info.get('title', 'Bilinmiyor'),
+                        authors=authors,
+                        description=info.get('description', ''),
+                        cover_path=cover,
+                        page_count=info.get('pageCount', 0)
+                    )
+            
+            if book:
+                user_list.books.add(book)
+                return JsonResponse({'status': 'success'})
+
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})
+
+    return JsonResponse({'status': 'error', 'message': 'Item not found'})
+
+@login_required
+def remove_item_from_list(request, list_id, item_type, item_id):
+    user_list = get_object_or_404(UserList, id=list_id, user=request.user)
+    
+    if request.method != 'POST':
+        return JsonResponse({'status': 'error', 'message': 'Invalid method'}, status=405)
+
+    try:
+        if item_type == 'movie':
+            # item_id artık TMDB ID olarak geliyor
+            movie = get_object_or_404(Movie, tmdb_id=item_id)
+            user_list.movies.remove(movie)
+            
+        elif item_type == 'tv':
+            tv = get_object_or_404(TVSeries, tmdb_id=item_id)
+            user_list.tv_series.remove(tv)
+            
+        elif item_type == 'book':
+            book = get_object_or_404(Book, google_id=item_id)
+            user_list.books.remove(book)
+            
+        return JsonResponse({'status': 'success'})
+        
+    except Exception as e:
+        return JsonResponse({'status': 'error', 'message': str(e)})

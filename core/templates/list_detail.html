@@ -5,18 +5,31 @@
 {% block content %}
     <div class="container mt-5">
         <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2 class="text-white">{{ user_list.name }}</h2>
-            {% if is_owner %}
-            <span class="badge bg-primary">Listeniz</span>
-            {% else %}
-            <span class="badge bg-secondary">{{ user_list.user.username }} kullanıcısının listesi</span>
-            {% endif %}
+            <div class="d-flex align-items-center">
+                <h2 class="text-white mb-0 me-3">{{ user_list.name }}</h2>
+                {% if not is_owner %}
+                    <button class="btn btn-outline-danger btn-sm like-list-btn" data-list-id="{{ user_list.id }}">
+                        <i class="fas fa-heart"></i> <span class="like-count">{{ user_list.likes.count }}</span>
+                    </button>
+                {% else %}
+                    <span class="text-muted ms-2"><i class="fas fa-heart text-danger"></i> {{ user_list.likes.count }} Beğeni</span>
+                {% endif %}
+            </div>
+            
+            <div>
+                {% if is_owner %}
+                <span class="badge bg-primary">Listeniz</span>
+                {% else %}
+                <a href="{% url 'profile' user_list.user.username %}" class="text-decoration-none">
+                    <span class="badge bg-secondary">{{ user_list.user.username }}</span>
+                </a>
+                {% endif %}
+            </div>
         </div>
 
-        <!-- LİSTE İÇERİĞİ -->
         <div class="row" id="listContent">
             {% for movie in movies %}
-            <div class="col-md-2 col-6 mb-4 position-relative">
+            <div id="list-item-movie-{{ movie.tmdb_id }}" class="col-md-2 col-6 mb-4 position-relative">
                 <div class="card h-100 shadow-lg border border-secondary bg-card">
                     <a href="{% url 'movie_detail' movie.tmdb_id %}">
                         {% if movie.poster_path %}
@@ -30,7 +43,30 @@
                     </div>
                     {% if is_owner %}
                     <button class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 rounded-circle" 
-                            onclick="removeFromList('movie', '{{ movie.id }}')" title="Listeden Çıkar">
+                            onclick="removeFromList('movie', '{{ movie.tmdb_id }}')" title="Listeden Çıkar">
+                        <i class="fas fa-times"></i>
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+
+            {% for tv in user_list.tv_series.all %}
+            <div id="list-item-tv-{{ tv.tmdb_id }}" class="col-md-2 col-6 mb-4 position-relative">
+                <div class="card h-100 shadow-lg border border-secondary bg-card">
+                    <a href="{% url 'tv_series_detail' tv.tmdb_id %}">
+                        {% if tv.poster_path %}
+                        <img src="https://image.tmdb.org/t/p/w500{{ tv.poster_path }}" class="card-img-top" alt="{{ tv.title }}">
+                        {% else %}
+                        <div class="bg-secondary text-white d-flex align-items-center justify-content-center" style="height: 250px;">Resim Yok</div>
+                        {% endif %}
+                    </a>
+                    <div class="card-body p-2 text-center">
+                        <small class="fw-bold text-white">{{ tv.title }}</small>
+                    </div>
+                    {% if is_owner %}
+                    <button class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 rounded-circle" 
+                            onclick="removeFromList('tv', '{{ tv.tmdb_id }}')" title="Listeden Çıkar">
                         <i class="fas fa-times"></i>
                     </button>
                     {% endif %}
@@ -39,7 +75,7 @@
             {% endfor %}
 
             {% for book in books %}
-            <div class="col-md-2 col-6 mb-4 position-relative">
+            <div id="list-item-book-{{ book.google_id }}" class="col-md-2 col-6 mb-4 position-relative">
                 <div class="card h-100 shadow-lg border border-secondary bg-card">
                     <a href="{% url 'book_detail' book.google_id %}">
                         {% if book.cover_path %}
@@ -53,7 +89,7 @@
                     </div>
                     {% if is_owner %}
                     <button class="btn btn-danger btn-sm position-absolute top-0 end-0 m-1 rounded-circle" 
-                            onclick="removeFromList('book', '{{ book.id }}')" title="Listeden Çıkar">
+                            onclick="removeFromList('book', '{{ book.google_id }}')" title="Listeden Çıkar">
                         <i class="fas fa-times"></i>
                     </button>
                     {% endif %}
@@ -61,14 +97,13 @@
             </div>
             {% endfor %}
 
-            {% if not movies and not books %}
-            <div class="col-12 text-center text-muted py-5">
+            {% if not movies and not books and not user_list.tv_series.all %}
+            <div id="empty-list-msg" class="col-12 text-center text-muted py-5">
                 <h4>Bu liste henüz boş.</h4>
             </div>
             {% endif %}
         </div>
 
-        <!-- ARAMA VE EKLEME BÖLÜMÜ (Sadece Sahibi İçin) -->
         {% if is_owner %}
         <hr class="my-5 border-secondary">
         <div class="card shadow-lg border border-secondary bg-card p-4 mb-5">
@@ -86,25 +121,23 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    function removeFromList(type, id) {
-        if(!confirm('Bu içeriği listeden çıkarmak istediğinize emin misiniz?')) return;
+<script id="list-data" type="application/json">
+    {
+        "movies": [{% for movie in movies %}"{{ movie.tmdb_id }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+        "tv": [{% for tv in user_list.tv_series.all %}"{{ tv.tmdb_id }}"{% if not forloop.last %}, {% endif %}{% endfor %}],
+        "books": [{% for book in books %}"{{ book.google_id }}"{% if not forloop.last %}, {% endif %}{% endfor %}]
+    }
+</script>
 
-        fetch(`/list/remove/{{ user_list.id }}/${type}/${id}/`, {
-            method: 'POST',
-            headers: {
-                'X-CSRFToken': '{{ csrf_token }}',
-                'Content-Type': 'application/json'
-            }
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.status === 'success') {
-                location.reload();
-            } else {
-                alert('Hata oluştu: ' + data.message);
-            }
-        });
+<script>
+    const existingItems = new Set();
+    try {
+        const listData = JSON.parse(document.getElementById('list-data').textContent);
+        listData.movies.forEach(id => existingItems.add('movie_' + id));
+        listData.tv.forEach(id => existingItems.add('tv_' + id));
+        listData.books.forEach(id => existingItems.add('book_' + id));
+    } catch (e) {
+        console.error('Veri yüklenirken hata:', e);
     }
 
     async function searchContent() {
@@ -121,43 +154,31 @@
 
             resultsDiv.innerHTML = ''; 
 
-            // Filmler
             if (data.movies && data.movies.length > 0) {
                 resultsDiv.innerHTML += '<h5 class="col-12 mt-3 text-white border-bottom border-secondary pb-2">Filmler</h5>';
                 data.movies.forEach(movie => {
-                    resultsDiv.innerHTML += `
-                        <div class="col-md-2 col-4">
-                            <div class="card h-100 bg-card border-secondary">
-                                <img src="${movie.poster_path ? 'https://image.tmdb.org/t/p/w200' + movie.poster_path : 'https://via.placeholder.com/150'}" class="card-img-top">
-                                <div class="card-body p-2 text-center">
-                                    <small class="d-block text-truncate text-white">${movie.title}</small>
-                                    <button class="btn btn-sm btn-success mt-2 w-100" onclick="addToList('movie', '${movie.id}')">Ekle</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    const isAdded = existingItems.has(`movie_${movie.id}`);
+                    resultsDiv.innerHTML += createCardHtml('movie', movie, isAdded);
                 });
             }
 
-            // Kitaplar
+            if (data.tv_series && data.tv_series.length > 0) {
+                resultsDiv.innerHTML += '<h5 class="col-12 mt-3 text-white border-bottom border-secondary pb-2">Diziler</h5>';
+                data.tv_series.forEach(tv => {
+                    const isAdded = existingItems.has(`tv_${tv.id}`);
+                    resultsDiv.innerHTML += createCardHtml('tv', tv, isAdded);
+                });
+            }
+
             if (data.books && data.books.length > 0) {
                 resultsDiv.innerHTML += '<h5 class="col-12 mt-3 text-white border-bottom border-secondary pb-2">Kitaplar</h5>';
                 data.books.forEach(book => {
-                    resultsDiv.innerHTML += `
-                        <div class="col-md-2 col-4">
-                            <div class="card h-100 bg-card border-secondary">
-                                <img src="${book.cover_path || 'https://via.placeholder.com/150'}" class="card-img-top">
-                                <div class="card-body p-2 text-center">
-                                    <small class="d-block text-truncate text-white">${book.title}</small>
-                                    <button class="btn btn-sm btn-success mt-2 w-100" onclick="addToList('book', '${book.google_id}')">Ekle</button>
-                                </div>
-                            </div>
-                        </div>
-                    `;
+                    const isAdded = existingItems.has(`book_${book.google_id}`);
+                    resultsDiv.innerHTML += createCardHtml('book', book, isAdded);
                 });
             }
 
-            if ((!data.movies || data.movies.length === 0) && (!data.books || data.books.length === 0)) {
+            if ((!data.movies || data.movies.length === 0) && (!data.books || data.books.length === 0) && (!data.tv_series || data.tv_series.length === 0)) {
                 resultsDiv.innerHTML = '<div class="col-12 text-center text-muted">Sonuç bulunamadı.</div>';
             }
 
@@ -167,8 +188,40 @@
         }
     }
 
-    function addToList(type, id) {
-        fetch(`/list/add/{{ user_list.id }}/${type}/${id}/`, {
+    function createCardHtml(type, item, isAdded) {
+        const id = type === 'book' ? item.google_id : item.id;
+        const image = type === 'book' ? (item.cover_url || 'https://via.placeholder.com/150') : (item.poster_path ? 'https://image.tmdb.org/t/p/w200' + item.poster_path : 'https://via.placeholder.com/150');
+        const title = item.title || item.name;
+        
+        let btnHtml = '';
+        if (isAdded) {
+            btnHtml = `<button class="btn btn-sm btn-danger mt-2 w-100 added-btn" onmouseover="this.innerText='Listeden Çıkar'" onmouseout="this.innerText='Listede'" onclick="toggleListItem('${type}', '${id}', this)">Listede</button>`;
+        } else {
+            btnHtml = `<button class="btn btn-sm btn-success mt-2 w-100" onclick="toggleListItem('${type}', '${id}', this)">Ekle</button>`;
+        }
+
+        return `
+            <div class="col-md-2 col-4">
+                <div class="card h-100 bg-card border-secondary">
+                    <img src="${image}" class="card-img-top">
+                    <div class="card-body p-2 text-center">
+                        <small class="d-block text-truncate text-white">${title}</small>
+                        ${btnHtml}
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function toggleListItem(type, id, btn) {
+        const isRemoving = btn.classList.contains('btn-danger');
+        const url = isRemoving ? `/list/remove/{{ user_list.id }}/${type}/${id}/` : `/list/add/{{ user_list.id }}/${type}/${id}/`;
+        
+        btn.disabled = true;
+        const originalText = btn.innerText;
+        btn.innerText = 'İşleniyor...';
+
+        fetch(url, {
             method: 'POST',
             headers: {
                 'X-CSRFToken': '{{ csrf_token }}',
@@ -178,11 +231,94 @@
         .then(response => response.json())
         .then(data => {
             if(data.status === 'success') {
-                alert('Eklendi!');
-                location.reload();
+                if (isRemoving) {
+                    btn.className = 'btn btn-sm btn-success mt-2 w-100';
+                    btn.innerText = 'Ekle';
+                    btn.onmouseover = null;
+                    btn.onmouseout = null;
+                    existingItems.delete(`${type}_${id}`);
+                } else {
+                    btn.className = 'btn btn-sm btn-danger mt-2 w-100 added-btn';
+                    btn.innerText = 'Listede';
+                    btn.onmouseover = function() { this.innerText = 'Listeden Çıkar'; };
+                    btn.onmouseout = function() { this.innerText = 'Listede'; };
+                    existingItems.add(`${type}_${id}`);
+                }
+            } else {
+                alert('Hata: ' + data.message);
+                btn.innerText = originalText;
+            }
+        })
+        .finally(() => {
+            btn.disabled = false;
+        });
+    }
+
+    function removeFromList(type, id) {
+        if(!confirm('Bu içeriği listeden çıkarmak istediğinize emin misiniz?')) return;
+
+        const url = `/list/remove/{{ user_list.id }}/${type}/${id}/`;
+        
+        fetch(url, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'Content-Type': 'application/json'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if(data.status === 'success') {
+                const elementId = `list-item-${type}-${id}`;
+                const element = document.getElementById(elementId);
+                if(element) {
+                    element.remove();
+                }
+                
+                if (typeof existingItems !== 'undefined') {
+                    existingItems.delete(`${type}_${id}`);
+                }
+
+                const listContent = document.getElementById('listContent');
+                const remainingItems = listContent.querySelectorAll('[id^="list-item-"]');
+                if (remainingItems.length === 0) {
+                     if (!document.getElementById('empty-list-msg')) {
+                        listContent.innerHTML += '<div id="empty-list-msg" class="col-12 text-center text-muted py-5"><h4>Bu liste henüz boş.</h4></div>';
+                     }
+                }
             } else {
                 alert('Hata: ' + data.message);
             }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Bir hata oluştu.');
+        });
+    }
+
+    const likeBtn = document.querySelector('.like-list-btn');
+    if (likeBtn) {
+        likeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const listId = this.dataset.listId;
+            const countSpan = this.querySelector('.like-count');
+            
+            fetch(`/list/like/${listId}/`, {
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'liked') {
+                    this.classList.remove('btn-outline-danger');
+                    this.classList.add('btn-danger');
+                } else {
+                    this.classList.remove('btn-danger');
+                    this.classList.add('btn-outline-danger');
+                }
+                countSpan.textContent = data.like_count;
+            });
         });
     }
 </script>

@@ -2,7 +2,6 @@ from rest_framework import serializers
 from django.contrib.auth.models import User
 from .models import Profile, Movie, Book, Rating, Review, Activity
 
-# Kullanıcı Bilgisi
 class UserSerializer(serializers.ModelSerializer):
     avatar = serializers.SerializerMethodField()
     
@@ -15,7 +14,6 @@ class UserSerializer(serializers.ModelSerializer):
             return obj.profile.avatar.url
         return None
 
-# Film ve Kitap
 class MovieSerializer(serializers.ModelSerializer):
     class Meta:
         model = Movie
@@ -26,13 +24,11 @@ class BookSerializer(serializers.ModelSerializer):
         model = Book
         fields = '__all__'
 
-# Sosyal Akış (Feed) için Aktivite Kartı
 class ActivitySerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     movie = MovieSerializer(read_only=True)
     book = BookSerializer(read_only=True)
     
-    # Ekstra bilgiler (Puanı ve Yorumu)
     rating_score = serializers.SerializerMethodField()
     review_preview = serializers.SerializerMethodField()
 
@@ -47,6 +43,6 @@ class ActivitySerializer(serializers.ModelSerializer):
 
     def get_review_preview(self, obj):
         if obj.related_review:
-            # Yorumun sadece ilk 150 karakteri (PDF Madde 50)
+            # Yorumun sadece ilk 150 karakteri
             return obj.related_review.text[:150] + "..." 
         return None

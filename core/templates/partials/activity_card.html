@@ -53,7 +53,6 @@
                         {% if activity.original_activity.action_type == 'RATED' %}puanladı{% elif activity.original_activity.action_type == 'REVIEWED' %}yorumladı{% endif %}
                     </small>
                 </div>
-                <!-- Orijinal İçerik -->
                 <div class="d-flex bg-card p-2 rounded align-items-start border border-secondary">
                     {% with original=activity.original_activity %}
                         {% if original.movie %}

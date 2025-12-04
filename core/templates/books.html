@@ -2,7 +2,6 @@
 
 {% block content %}
 <div class="row mt-4">
-    <!-- Sol Taraf: Kitap Listesi -->
     <div class="col-md-9">
         <h2 class="mb-4 border-bottom border-secondary pb-2 text-white">Kitaplar - {{ current_category|title }}</h2>
         
@@ -35,9 +34,7 @@
         </div>
     </div>
 
-    <!-- Sağ Taraf: Sidebar -->
     <div class="col-md-3">
-        <!-- Kategoriler -->
         <div class="card shadow-lg border border-secondary bg-card mb-4">
             <div class="card-header bg-input border-secondary fw-bold text-white">
                 <i class="fas fa-filter"></i> Kategoriler
@@ -51,7 +48,6 @@
             </div>
         </div>
 
-        <!-- Site İçi En İyiler -->
         {% if local_top_books %}
         <div class="card shadow-lg border border-secondary bg-card">
             <div class="card-header bg-input border-secondary fw-bold text-white">

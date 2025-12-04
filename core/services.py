@@ -3,7 +3,7 @@ import os
 from django.contrib.auth.models import User
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
-# API KEY (TMDb için gerekli, Google Books için gerekmez)
+# API KEY
 TMDB_API_KEY = os.getenv('TMDB_API_KEY')
 TMDB_URL = "https://api.themoviedb.org/3"
 GOOGLE_BOOKS_URL = "https://www.googleapis.com/books/v1/volumes"
@@ -22,13 +22,10 @@ def get_movie_director(movie_id):
     return ""
 
 def search_content_service(query):
-    """
-    Hem film, hem kitap, hem de kullanıcı arar ve sonuçları birleştirip döner.
-    """
     movies = search_movies(query)
     books = search_books(query)
+    tv_series = search_tv_series(query)
     
-    # Kullanıcı Arama
     users = User.objects.filter(username__icontains=query, is_superuser=False)[:5]
     user_results = []
     for user in users:
@@ -38,7 +35,7 @@ def search_content_service(query):
             'avatar': avatar_url
         })
 
-    return {'movies': movies, 'books': books, 'users': user_results}
+    return {'movies': movies, 'books': books, 'tv_series': tv_series, 'users': user_results}
 
 def search_movies(query):
     if not query: return []
@@ -49,8 +46,6 @@ def search_movies(query):
         if response.status_code == 200:
             results = response.json().get('results', [])
             
-            # İlk 10 sonuç için yönetmen bilgisini paralel çek
-            # Hepsini çekersek çok yavaşlar
             top_results = results[:10]
             remaining_results = results[10:]
             
@@ -69,11 +64,7 @@ def search_movies(query):
     except: return []
 
 def search_books(query):
-    """
-    Google Books Arama - HTTP linklerini HTTPS'e çevirir.
-    """
     if not query: return []
-    # Dil kısıtlaması yok, her dilden kitap gelir. maxResults artırıldı.
     params = {'q': query, 'maxResults': 40}
     
     try:
@@ -86,14 +77,9 @@ def search_books(query):
                 info = item.get('volumeInfo', {})
                 image_links = info.get('imageLinks', {})
                 
-                # Resim linkini al
-                # API'den gelen linkler bazen bozuk veya "publisher/content" olduğu için erişilemez olabiliyor.
-                # Bu yüzden standart Google Books görsel linkini kendimiz oluşturuyoruz.
                 google_id = item.get('id')
-                # Arama sonuçlarında da net gözükmesi için h=500 yeterli
                 cover = f"https://books.google.com/books/content?id={google_id}&printsec=frontcover&img=1&zoom=1&h=500&source=gbs_api"
 
-                # Yazarları string yap
                 authors = ", ".join(info.get('authors', [])) if info.get('authors') else "Yazar Bilinmiyor"
 
                 cleaned_books.append({
@@ -135,8 +121,6 @@ def get_book_detail_service(google_id):
     except Exception as e:
         print(f"Kitap Hatası: {e}")
     return None
-
-# --- YENİ EKLENEN SERVİSLER ---
 
 def _fetch_tmdb_movies(url, params):
     try:
@@ -207,3 +191,72 @@ def get_books_by_category(query):
     if query.startswith('subject:'):
         return search_books(query)
     return search_books(f"subject:{query}")
+
+# --- TV SERIES SERVICES ---
+
+def search_tv_series(query):
+    if not query: return []
+    url = f"{TMDB_URL}/search/tv"
+    params = {'api_key': TMDB_API_KEY, 'query': query, 'language': 'tr-TR'}
+    try:
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            return response.json().get('results', [])
+        return []
+    except: return []
+
+def get_popular_tv_series(page=1):
+    url = f"{TMDB_URL}/tv/popular"
+    params = {'api_key': TMDB_API_KEY, 'language': 'tr-TR', 'page': page}
+    try:
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            return response.json().get('results', [])
+        return []
+    except: return []
+
+def get_top_rated_tv_series(page=1):
+    url = f"{TMDB_URL}/tv/top_rated"
+    params = {'api_key': TMDB_API_KEY, 'language': 'tr-TR', 'page': page}
+    try:
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            return response.json().get('results', [])
+        return []
+    except: return []
+
+def get_tv_series_detail_service(tv_id):
+    url = f"{TMDB_URL}/tv/{tv_id}"
+    params = {'api_key': TMDB_API_KEY, 'language': 'tr-TR', 'append_to_response': 'credits,videos,similar'}
+    try:
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            return response.json()
+        return None
+    except: return None
+
+def get_tv_genres():
+    url = f"{TMDB_URL}/genre/tv/list"
+    params = {'api_key': TMDB_API_KEY, 'language': 'tr-TR'}
+    try:
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            return response.json().get('genres', [])
+    except:
+        pass
+    return []
+
+def get_tv_series_by_genre(genre_id):
+    url = f"{TMDB_URL}/discover/tv"
+    params = {
+        'api_key': TMDB_API_KEY, 
+        'language': 'tr-TR', 
+        'with_genres': genre_id,
+        'sort_by': 'popularity.desc'
+    }
+    try:
+        response = requests.get(url, params=params)
+        if response.status_code == 200:
+            return response.json().get('results', [])
+        return []
+    except: return []

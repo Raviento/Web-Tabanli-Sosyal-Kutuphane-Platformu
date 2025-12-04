@@ -8,8 +8,11 @@ db.sqlite3
 .env
 
 # Medya Dosyaları (Kullanıcıların yüklediği resimler)
-media/
+media/*
+!media/avatars/
+media/avatars/*
 core/media/
+!media/avatars/usericon.png
 
 # VS Code Ayarları
 .vscode/

@@ -4,7 +4,7 @@
 
 {% block content %}
 <style>
-    /* Profile Specific Styles */
+    /* Profil Stilleri */
     .profile-header-section {
         border-bottom: 1px solid var(--border-color);
         padding-bottom: 2rem;
@@ -66,7 +66,7 @@
         width: 50px;
         border-radius: 2px;
     }
-    /* Modal Dark Theme Overrides */
+    /* Modal Tema Ayarları */
     .modal-content {
         background-color: var(--bg-card);
         color: var(--text-primary);
@@ -81,7 +81,6 @@
 </style>
 
 <div class="container mt-4">
-    <!-- Header Section -->
     <div class="row profile-header-section align-items-end">
         <div class="col-md-2 text-center text-md-start">
             {% if profile.avatar %}
@@ -134,9 +133,9 @@
     </div>
 
     <div class="row">
-        <!-- Main Column -->
+        <!-- Ana Sütun -->
         <div class="col-md-12">
-            <!-- Navigation Tabs -->
+            <!-- Sekmeler -->
             <ul class="nav nav-tabs mb-4 border-secondary" id="profileTabs" role="tablist">
                 <li class="nav-item" role="presentation">
                     <button class="nav-link active text-white bg-transparent border-0 border-bottom border-3 border-success" id="overview-tab" data-bs-toggle="tab" data-bs-target="#overview" type="button" role="tab">Genel Bakış</button>
@@ -159,11 +158,11 @@
             </ul>
 
             <div class="tab-content" id="profileTabsContent">
-                <!-- OVERVIEW TAB -->
+                <!-- GENEL BAKIŞ -->
                 <div class="tab-pane fade show active" id="overview" role="tabpanel">
                     <div class="row">
                         <div class="col-md-8">
-                            <!-- Favorite Films -->
+                            <!-- Favori Filmler -->
                             {% if favorite_films %}
                             <div class="mb-5">
                                 <div class="section-title">
@@ -185,7 +184,7 @@
                             </div>
                             {% endif %}
 
-                            <!-- Recent Activity -->
+                            <!-- Son Aktiviteler -->
                             <div class="mb-4">
                                 <div class="section-title">
                                     <span>Son Aktiviteler</span>
@@ -282,9 +281,9 @@
                             </div>
                         </div>
 
-                        <!-- Sidebar (Overview) -->
+                        <!-- Yan Panel -->
                         <div class="col-md-4">
-                            <!-- Watchlist Preview -->
+                            <!-- İzlenecekler -->
                             <div class="mb-4">
                                 <div class="section-title">
                                     <span>İzlenecekler</span>
@@ -303,7 +302,6 @@
                                 </div>
                             </div>
 
-                            <!-- Readlist Preview -->
                             <div class="mb-4">
                                 <div class="section-title">
                                     <span>Okunacaklar</span>
@@ -322,7 +320,6 @@
                                 </div>
                             </div>
                             
-                            <!-- Lists Preview -->
                              <div class="mb-4">
                                 <div class="section-title">
                                     <span>Listeler</span>
@@ -344,7 +341,6 @@
                     </div>
                 </div>
 
-                <!-- WATCHED TAB -->
                 <div class="tab-pane fade" id="watched" role="tabpanel">
                     <div class="row">
                         {% for movie in watched_movies %}
@@ -366,7 +362,6 @@
                     </div>
                 </div>
 
-                <!-- WATCHLIST TAB -->
                 <div class="tab-pane fade" id="watchlist" role="tabpanel">
                     <div class="row">
                         {% for movie in watchlist_movies %}
@@ -388,7 +383,6 @@
                     </div>
                 </div>
 
-                <!-- READ TAB -->
                 <div class="tab-pane fade" id="read" role="tabpanel">
                     <div class="row">
                         {% for book in read_books %}
@@ -410,7 +404,6 @@
                     </div>
                 </div>
 
-                <!-- READLIST TAB -->
                 <div class="tab-pane fade" id="readlist" role="tabpanel">
                     <div class="row">
                         {% for book in readlist_books %}
@@ -432,7 +425,6 @@
                     </div>
                 </div>
 
-                <!-- LISTS TAB -->
                 <div class="tab-pane fade" id="lists" role="tabpanel">
                     <div class="list-group">
                         {% for list in custom_lists %}
@@ -453,15 +445,12 @@
     </div>
 
     <script>
-        // Tab switching logic for styling
         document.querySelectorAll('#profileTabs button').forEach(button => {
             button.addEventListener('shown.bs.tab', event => {
-                // Reset all tabs
                 document.querySelectorAll('#profileTabs button').forEach(btn => {
                     btn.classList.remove('active', 'text-white', 'border-bottom', 'border-3', 'border-success');
                     btn.classList.add('text-secondary');
                 });
-                // Style active tab
                 event.target.classList.remove('text-secondary');
                 event.target.classList.add('active', 'text-white', 'border-bottom', 'border-3', 'border-success');
             })
@@ -470,7 +459,6 @@
 
 </div>
 
-<!-- Create List Modal -->
 <div class="modal fade" id="createListModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -495,7 +483,6 @@
     </div>
 </div>
 
-<!-- TAKİPÇİLER MODAL -->
 <div class="modal fade" id="followersModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">
@@ -532,7 +519,6 @@
     </div>
 </div>
 
-<!-- TAKİP EDİLENLER MODAL -->
 <div class="modal fade" id="followingModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-scrollable">
         <div class="modal-content">

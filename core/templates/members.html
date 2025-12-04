@@ -2,7 +2,6 @@
 
 {% block content %}
 <div class="container mt-4">
-    <!-- Tabs -->
     <ul class="nav nav-tabs border-bottom-0 mb-4" id="membersTab" role="tablist">
         <li class="nav-item" role="presentation">
             <button class="nav-link active bg-transparent border-0 border-bottom border-3 border-success rounded-0 text-white" id="members-tab" data-bs-toggle="tab" data-bs-target="#members" type="button" role="tab">
@@ -23,13 +22,11 @@
 
     <div class="tab-content" id="membersTabContent">
         
-        <!-- EN AKTİF ÜYELER (Letterboxd Style) -->
         <div class="tab-pane fade show active" id="members" role="tabpanel">
             <div class="row">
                 {% for member in active_users %}
                 <div class="col-lg-4 col-md-6 mb-4">
                     <div class="d-flex flex-column align-items-center text-center">
-                        <!-- Avatar -->
                         <a href="{% url 'profile' member.username %}" class="mb-3 position-relative">
                             {% if member.profile.avatar %}
                                 <img src="{{ member.profile.avatar.url }}" class="rounded-circle border border-2 border-secondary" 
@@ -41,7 +38,6 @@
                             {% endif %}
                         </a>
                         
-                        <!-- Username & Stats -->
                         <h5 class="fw-bold mb-1">
                             <a href="{% url 'profile' member.username %}" class="text-white text-decoration-none">{{ member.username }}</a>
                         </h5>
@@ -51,7 +47,6 @@
                             <span class="text-white">{{ member.review_count }}</span> İnceleme
                         </p>
 
-                        <!-- Recent Activity Strip -->
                         <div class="d-flex justify-content-center gap-1 w-100 px-3">
                             {% for item in member.recent_items %}
                                 <div style="width: 50px; height: 75px;" class="bg-card rounded overflow-hidden position-relative shadow-sm border border-secondary">
@@ -64,7 +59,6 @@
                                 </div>
                             {% endfor %}
                             
-                            <!-- Fill empty slots if less than 4 items but more than 0 -->
                             {% if member.recent_items|length > 0 and member.recent_items|length < 4 %}
                                 {% for i in "x"|rjust:3 %}
                                     {% if forloop.counter <= 4|add:"-"|add:member.recent_items|length %}
@@ -85,7 +79,6 @@
             </div>
         </div>
 
-        <!-- POPÜLER İNCELEMELER -->
         <div class="tab-pane fade" id="reviews" role="tabpanel">
             <div class="row">
                 {% for activity in popular_reviews %}

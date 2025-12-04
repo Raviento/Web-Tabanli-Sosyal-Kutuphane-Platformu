@@ -101,19 +101,16 @@
                 <h5 class="mb-3 text-white"><i class="fas fa-list"></i> Listene Ekle</h5>
                 <div class="d-flex gap-2 flex-wrap">
                     
-                    <!-- İzledim Butonu -->
                     <button class="btn {% if 'watched' in standard_lists_containing %}btn-success{% else %}btn-outline-success{% endif %} flex-grow-1" 
                             onclick="toggleList('watched', null, this)">
                         <i class="fas fa-check"></i> İzledim
                     </button>
                     
-                    <!-- İzlenecek Butonu -->
                     <button class="btn {% if 'watchlist' in standard_lists_containing %}btn-primary{% else %}btn-outline-primary{% endif %} flex-grow-1" 
                             onclick="toggleList('watchlist', null, this)">
                         <i class="fas fa-bookmark"></i> İzlenecek
                     </button>
 
-                    <!-- Özel Listeler Dropdown -->
                     <div class="dropdown flex-grow-1">
                         <button class="btn btn-secondary dropdown-toggle w-100" type="button" data-bs-toggle="dropdown">
                             Özel Listeler
@@ -150,7 +147,6 @@
             </div>
             {% endif %}
 
-            <!-- YORUMLAR BÖLÜMÜ -->
             <div class="mt-5">
                 <h4 class="border-bottom border-secondary pb-2 mb-4 text-white">Yorumlar ({{ reviews|length }})</h4>
                 
@@ -202,7 +198,6 @@
         </div>
     </div>
 
-    <!-- PUANLAMA MODAL -->
     <div class="modal fade" id="ratingModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-card text-white border-secondary">
@@ -232,7 +227,6 @@
         </div>
     </div>
 
-    <!-- YORUM DÜZENLEME MODAL -->
     <div class="modal fade" id="editReviewModal" tabindex="-1" aria-hidden="true">
         <div class="modal-dialog modal-dialog-centered">
             <div class="modal-content bg-card text-white border-secondary">

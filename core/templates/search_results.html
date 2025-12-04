@@ -5,15 +5,14 @@
 {% block content %}
 <div class="container mt-4">
     <div class="row">
-        <!-- Sol Kolon: Sonuçlar -->
         <div class="col-md-9">
             <h5 class="text-muted border-bottom border-secondary pb-2 mb-4 text-uppercase" style="font-size: 0.85rem; letter-spacing: 1px;">
                 "{{ query }}" için sonuçlar gösteriliyor
             </h5>
 
-            <!-- Filmler -->
             <div id="movies-section">
             {% if results.movies %}
+                <h6 class="text-muted mb-3 ps-1 border-start border-4 border-warning">Filmler</h6>
                 {% for movie in results.movies %}
                 <div class="card bg-transparent border-0 border-bottom border-secondary mb-3 pb-3 rounded-0">
                     <div class="row g-0">
@@ -54,9 +53,46 @@
             {% endif %}
             </div>
 
-            <!-- Kitaplar -->
+            <div id="tv-section">
+            {% if results.tv_series %}
+                <h6 class="text-muted mb-3 ps-1 border-start border-4 border-info">Diziler</h6>
+                {% for tv in results.tv_series %}
+                <div class="card bg-transparent border-0 border-bottom border-secondary mb-3 pb-3 rounded-0">
+                    <div class="row g-0">
+                        <div class="col-auto">
+                            <a href="{% url 'tv_series_detail' tv.id %}">
+                                {% if tv.poster_path %}
+                                <img src="https://image.tmdb.org/t/p/w92{{ tv.poster_path }}" class="rounded border border-secondary" alt="{{ tv.name }}" style="width: 70px; height: 105px; object-fit: cover;">
+                                {% else %}
+                                <div class="bg-card border border-secondary rounded d-flex align-items-center justify-content-center text-muted" style="width: 70px; height: 105px;">
+                                    <i class="fas fa-tv"></i>
+                                </div>
+                                {% endif %}
+                            </a>
+                        </div>
+                        <div class="col ps-3">
+                            <h5 class="mb-1">
+                                <a href="{% url 'tv_series_detail' tv.id %}" class="text-white text-decoration-none fw-bold">{{ tv.name }}</a>
+                                <span class="text-muted fw-normal ms-1">
+                                    {% if tv.first_air_date %}
+                                        {{ tv.first_air_date|slice:":4" }}
+                                    {% endif %}
+                                </span>
+                            </h5>
+                            
+                            <p class="text-muted small mb-0 text-truncate" style="max-width: 600px;">
+                                {{ tv.overview }}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% endif %}
+            </div>
+
             <div id="books-section">
             {% if results.books %}
+                <h6 class="text-muted mb-3 ps-1 border-start border-4 border-success">Kitaplar</h6>
                 {% for book in results.books %}
                 <div class="card bg-transparent border-0 border-bottom border-secondary mb-3 pb-3 rounded-0">
                     <div class="row g-0">
@@ -88,7 +124,6 @@
             {% endif %}
             </div>
 
-            <!-- Kullanıcılar -->
             <div id="users-section">
             {% if results.users %}
                 {% for user in results.users %}
@@ -123,7 +158,6 @@
             {% endif %}
         </div>
 
-        <!-- Sağ Kolon: Filtreler -->
         <div class="col-md-3">
             <h5 class="text-muted border-bottom border-secondary pb-2 mb-3 text-uppercase" style="font-size: 0.85rem; letter-spacing: 1px;">
                 Sonuçları Filtrele
@@ -132,11 +166,15 @@
             <div class="list-group list-group-flush bg-transparent">
                 <a href="#" onclick="filterResults('all', this); return false;" class="list-group-item list-group-item-action bg-transparent text-white d-flex justify-content-between align-items-center px-0 border-0 py-1 active-filter">
                     Tümü
-                    <span class="badge bg-secondary rounded-pill">{{ results.movies|length|add:results.books|length|add:results.users|length }}</span>
+                    <span class="badge bg-secondary rounded-pill">{{ results.movies|length|add:results.books|length|add:results.users|length|add:results.tv_series|length }}</span>
                 </a>
                 <a href="#" onclick="filterResults('movies', this); return false;" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
                     Filmler
                     <span class="badge bg-dark border border-secondary text-muted rounded-pill">{{ results.movies|length }}</span>
+                </a>
+                <a href="#" onclick="filterResults('tv', this); return false;" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
+                    Diziler
+                    <span class="badge bg-dark border border-secondary text-muted rounded-pill">{{ results.tv_series|length }}</span>
                 </a>
                 <a href="#" onclick="filterResults('books', this); return false;" class="list-group-item list-group-item-action bg-transparent text-muted d-flex justify-content-between align-items-center px-0 border-0 py-1">
                     Kitaplar
@@ -178,12 +216,10 @@
 {% block extra_js %}
 <script>
 function filterResults(type, element) {
-    // Update active state in sidebar
     document.querySelectorAll('.list-group-item').forEach(item => {
         item.classList.remove('active-filter', 'text-white');
         item.classList.add('text-muted');
         
-        // Reset badge style
         const badge = item.querySelector('.badge');
         if (badge) {
             badge.classList.remove('bg-secondary', 'text-white');
@@ -191,22 +227,20 @@ function filterResults(type, element) {
         }
     });
     
-    // Set active state
     element.classList.add('active-filter', 'text-white');
     element.classList.remove('text-muted');
     
-    // Update active badge style
     const activeBadge = element.querySelector('.badge');
     if (activeBadge) {
         activeBadge.classList.remove('bg-dark', 'text-muted', 'border', 'border-secondary');
         activeBadge.classList.add('bg-secondary', 'text-white');
     }
 
-    // Show/Hide sections
     const sections = {
         'movies': document.getElementById('movies-section'),
         'books': document.getElementById('books-section'),
-        'users': document.getElementById('users-section')
+        'users': document.getElementById('users-section'),
+        'tv': document.getElementById('tv-section')
     };
 
     if (type === 'all') {

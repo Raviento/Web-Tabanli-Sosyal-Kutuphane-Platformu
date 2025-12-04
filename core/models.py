@@ -2,7 +2,7 @@ from django.db import models
 from django.contrib.auth.models import User
 from django.core.validators import MinValueValidator, MaxValueValidator
 
-# --- 1. PROFİL (PDF: 2.1.5) ---
+# --- 1. PROFİL ---
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
@@ -12,7 +12,7 @@ class Profile(models.Model):
     def __str__(self):
         return self.user.username
 
-# --- 2. İÇERİKLER (PDF: 2.2.1) ---
+# --- 2. İÇERİKLER ---
 class Movie(models.Model):
     tmdb_id = models.IntegerField(unique=True)
     title = models.CharField(max_length=255)
@@ -46,25 +46,27 @@ class Book(models.Model):
     def __str__(self):
         return self.title
 
-# --- 3. ETKİLEŞİMLER (PDF: 2.1.2) ---
+# --- 3. ETKİLEŞİMLER ---
 class Rating(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, null=True, blank=True)
+    tv_series = models.ForeignKey(TVSeries, on_delete=models.CASCADE, null=True, blank=True)
     book = models.ForeignKey(Book, on_delete=models.CASCADE, null=True, blank=True)
     score = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        unique_together = [['user', 'movie'], ['user', 'book']]
+        unique_together = [['user', 'movie'], ['user', 'book'], ['user', 'tv_series']]
 
 class Review(models.Model):
     user = models.ForeignKey(User, on_delete=models.CASCADE)
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, null=True, blank=True)
+    tv_series = models.ForeignKey(TVSeries, on_delete=models.CASCADE, null=True, blank=True)
     book = models.ForeignKey(Book, on_delete=models.CASCADE, null=True, blank=True)
     text = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
 
-# --- 4. AKTİVİTE AKIŞI / FEED (PDF: 2.1.2) ---
+# --- 4. AKTİVİTE AKIŞI ---
 class Activity(models.Model):
     ACTION_TYPES = (
         ('RATED', 'Puanladı'),
@@ -78,6 +80,7 @@ class Activity(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     
     movie = models.ForeignKey(Movie, on_delete=models.CASCADE, null=True, blank=True)
+    tv_series = models.ForeignKey(TVSeries, on_delete=models.CASCADE, null=True, blank=True)
     book = models.ForeignKey(Book, on_delete=models.CASCADE, null=True, blank=True)
     
     related_rating = models.ForeignKey(Rating, on_delete=models.SET_NULL, null=True, blank=True)
@@ -120,23 +123,25 @@ class Notification(models.Model):
     class Meta:
         ordering = ['-created_at']
 
-# --- 5. LİSTELER (PDF: 2.1.4 & 2.1.5 - EKSİK OLAN KISIM) ---
+# --- 5. LİSTELER ---
 class UserList(models.Model):
     LIST_TYPES = (
         ('watched', 'İzledim'),
         ('watchlist', 'İzlenecek'),
         ('read', 'Okudum'),
         ('readlist', 'Okunacak'),
-        ('custom', 'Özel Liste'), # Kullanıcının oluşturduğu 'En İyi Filmler' vb.
+        ('custom', 'Özel Liste'),
     )
     
     user = models.ForeignKey(User, on_delete=models.CASCADE, related_name='lists')
-    name = models.CharField(max_length=100) # Liste adı
+    name = models.CharField(max_length=100)
     list_type = models.CharField(max_length=20, choices=LIST_TYPES, default='custom')
     
-    # Listenin içindekiler (Hem film hem kitap olabilir)
     movies = models.ManyToManyField(Movie, blank=True, related_name='lists')
+    tv_series = models.ManyToManyField(TVSeries, blank=True, related_name='lists')
     books = models.ManyToManyField(Book, blank=True, related_name='lists')
+    
+    likes = models.ManyToManyField(User, related_name='liked_lists', blank=True)
 
     def __str__(self):
         return f"{self.user.username} - {self.name}"

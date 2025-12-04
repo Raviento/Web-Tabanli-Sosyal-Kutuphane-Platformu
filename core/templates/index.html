@@ -38,7 +38,6 @@
                     {% endfor %}
                 </div>
 
-                <!-- Daha Fazla Yükle Butonu -->
                 {% if activities.has_next %}
                     <div class="text-center mt-4 mb-5">
                         <button id="load-more-btn" class="btn btn-outline-primary px-4 py-2" data-next-page="{{ activities.next_page_number }}">
@@ -55,11 +54,6 @@
 
 {% block extra_js %}
     <script>
-        // Eski searchContent fonksiyonu artık kullanılmıyor çünkü form submit kullanıyoruz.
-        // Ancak toggleLike, toggleComments vb. fonksiyonlar base.html'de veya burada tanımlı olmalı.
-        // Bu dosyada tanımlı değiller, muhtemelen base.html'de veya inline scriptte olmalıydı.
-        // Kullanıcı sadece tema güncellemesi istediği için JS mantığını bozmadan bırakıyorum.
-        
         function toggleComments(activityId) {
             const commentsDiv = document.getElementById(`comments-${activityId}`);
             commentsDiv.classList.toggle('d-none');

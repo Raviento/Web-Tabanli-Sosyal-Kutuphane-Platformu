@@ -15,7 +15,6 @@
 {% block content %}
 <div class="container mt-4">
     
-    <!-- VİTRİN MODÜLLERİ -->
     <section class="mb-5">
         <div class="d-flex justify-content-between align-items-center mb-3 border-bottom border-secondary pb-2">
             <h4 class="text-white mb-0"><i class="fas fa-star text-warning me-2"></i> Vitrin</h4>
@@ -42,7 +41,6 @@
         </div>
 
         <div class="tab-content" id="showcase-tabContent">
-            <!-- Site Popüler (Film) -->
             <div class="tab-pane fade show active" id="platform-popular-content" role="tabpanel">
                 {% if platform_popular_movies %}
                 <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
@@ -70,7 +68,6 @@
                 {% endif %}
             </div>
 
-            <!-- Global Popüler (Film) -->
             <div class="tab-pane fade" id="api-popular-content" role="tabpanel">
                 <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
                     {% for movie in api_popular_movies %}
@@ -94,7 +91,6 @@
                 </div>
             </div>
             
-            <!-- Site En İyi (Film) -->
             <div class="tab-pane fade" id="platform-top-content" role="tabpanel">
                 {% if platform_top_rated_movies %}
                 <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
@@ -122,7 +118,6 @@
                 {% endif %}
             </div>
 
-            <!-- Global En İyi (Film) -->
             <div class="tab-pane fade" id="api-top-content" role="tabpanel">
                 <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
                     {% for movie in api_top_rated_movies %}
@@ -146,7 +141,6 @@
                 </div>
             </div>
 
-            <!-- Site Popüler (Kitap) -->
             <div class="tab-pane fade" id="platform-books-content" role="tabpanel">
                 {% if platform_popular_books %}
                 <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
@@ -174,7 +168,6 @@
                 {% endif %}
             </div>
 
-            <!-- Global Popüler (Kitap) -->
             <div class="tab-pane fade" id="api-books-content" role="tabpanel">
                 <div class="row row-cols-2 row-cols-md-3 row-cols-lg-6 g-3">
                     {% for book in api_popular_books %}
@@ -200,7 +193,6 @@
         </div>
     </section>
 
-    <!-- GELİŞMİŞ FİLTRELEME -->
     <section class="mb-5">
         <h4 class="text-white mb-3 border-bottom border-secondary pb-2"><i class="fas fa-filter text-info me-2"></i> Keşfet & Filtrele</h4>
         
@@ -241,11 +233,10 @@
         </div>
 
         <div id="filter-results-container">
-            <!-- Filtre sonuçları buraya gelecek -->
+            
         </div>
     </section>
 
-    <!-- TOPLULUK AKIŞI -->
     <section>
         <h4 class="text-white mb-4 border-bottom border-secondary pb-2"><i class="fas fa-globe text-success me-2"></i> Topluluk Akışı</h4>
         <div class="row justify-content-center">
@@ -256,7 +247,6 @@
                     {% endfor %}
                 </div>
 
-                <!-- Daha Fazla Yükle Butonu -->
                 {% if activities.has_next %}
                     <div class="text-center mt-4 mb-5">
                         <button id="load-more-btn" class="btn btn-outline-primary px-4 py-2" data-next-page="{{ activities.next_page_number }}">
@@ -273,7 +263,6 @@
 
 {% block extra_js %}
 <script>
-    // Filtreleme Mantığı
     document.getElementById('filter-type').addEventListener('change', function() {
         const type = this.value;
         const genreSelect = document.getElementById('filter-genre');
@@ -297,7 +286,6 @@
         const formData = new FormData(this);
         const params = new URLSearchParams(formData);
         
-        // Kitap seçiliyse genre parametresini book_genre inputundan al
         if (document.getElementById('filter-type').value === 'book') {
             params.set('genre', document.getElementById('filter-book-genre').value);
         }
@@ -312,7 +300,6 @@
             });
     });
 
-    // Akış Beğeni/Yorum/Yükle Mantığı (index.html'den kopyalandı)
     function toggleComments(activityId) {
         const commentsDiv = document.getElementById(`comments-${activityId}`);
         commentsDiv.classList.toggle('d-none');
