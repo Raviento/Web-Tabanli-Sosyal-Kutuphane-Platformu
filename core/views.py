@@ -260,7 +260,8 @@ def index(request):
         
         activity_list = Activity.objects.filter(user__in=following_users).select_related('user', 'user__profile', 'movie', 'book').order_by('-created_at')
     else:
-        activity_list = Activity.objects.select_related('user', 'user__profile', 'movie', 'book').all().order_by('-created_at')
+        # Giriş yapmamışsa aktivite gösterme (Landing Page)
+        activity_list = Activity.objects.none()
     
     paginator = Paginator(activity_list, 10) 
     page_number = request.GET.get('page')
@@ -1127,11 +1128,12 @@ def members_page(request):
     return render(request, 'members.html', context)
 
 def search_page(request):
-    query = request.GET.get('q', '')
-    results = {'movies': [], 'books': [], 'users': []}
+    query = request.GET.get('q', '').strip()
     
-    if query:
-        results = search_content_service(query)
+    if not query:
+        return redirect(request.META.get('HTTP_REFERER', 'home'))
+
+    results = search_content_service(query)
         
     return render(request, 'search_results.html', {'query': query, 'results': results})
 

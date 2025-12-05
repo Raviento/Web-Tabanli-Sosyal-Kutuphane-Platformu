@@ -1,21 +1,37 @@
 {% extends 'base.html' %}
+{% load static %}
 
 {% block extra_css %}
 <style>
     .search-box { max-width: 600px; margin: 50px auto; }
     .feed-avatar { width: 40px; height: 40px; object-fit: cover; border: 2px solid #2c3440; }
     .feed-poster { width: 70px; height: 100px; object-fit: cover; border-radius: 5px; }
+    
+    /* Landing Page Styles */
+    .landing-title {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        font-size: 3.5rem;
+        font-weight: 700;
+        text-shadow: 0 4px 15px rgba(0,0,0,0.8);
+        letter-spacing: 1px;
+    }
+    .btn-join {
+        transition: all 0.3s ease;
+        font-size: 1.2rem;
+        padding: 15px 50px;
+    }
+    .btn-join:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+    }
 </style>
 {% endblock %}
 
 {% block content %}
+    {% if user.is_authenticated %}
         <div class="search-box text-center">
-            {% if user.is_authenticated %}
-                <h2 class="mb-4 text-white">Hoş geldin, {{ user.username }}! 👋</h2>
-                <p class="text-muted">Bugün ne keşfetmek istersin?</p>
-            {% else %}
-                <h1 class="mb-4 text-white">Sosyal Kütüphane</h1>
-            {% endif %}
+            <h2 class="mb-4 text-white">Hoş geldin, {{ user.username }}! 👋</h2>
+            <p class="text-muted">Bugün ne keşfetmek istersin?</p>
 
             <form action="{% url 'search_page' %}" method="GET">
                 <div class="input-group mb-3 shadow-lg">
@@ -49,6 +65,16 @@
             </div>
         </div>
         {% endif %}
+    {% else %}
+        <!-- Landing Page for Guests -->
+        <div class="full-screen-bg text-center text-white p-4">
+            <h1 class="landing-title mb-4">Bugün ne keşfetmek istersin?</h1>
+            <p class="lead mb-5 text-light opacity-75 fs-4">Filmler, kitaplar ve arkadaşlarınla dolu bir dünya seni bekliyor.</p>
+            <a href="{% url 'register' %}" class="btn btn-primary btn-join rounded-pill fw-bold shadow-lg">
+                <i class="fas fa-user-plus me-2"></i> Aramıza Katıl
+            </a>
+        </div>
+    {% endif %}
         
 {% endblock %}
 

@@ -3,7 +3,7 @@
 {% block title %}Kayıt Ol{% endblock %}
 
 {% block content %}
-<div class="d-flex align-items-center justify-content-center" style="min-height: 80vh;">
+<div class="full-screen-bg">
     <div class="card bg-card border-secondary shadow-lg p-4" style="width: 400px;">
         <h3 class="text-center mb-4 text-white">Kayıt Ol</h3>
         {% if messages %}
@@ -29,7 +29,7 @@
                 <label class="text-muted mb-1">Şifre Tekrar</label>
                 <input type="password" name="password_confirm" class="form-control bg-input text-white border-secondary" required>
             </div>
-            <button type="submit" class="btn btn-success w-100 py-2 fw-bold">Kayıt Ol</button>
+            <button type="submit" class="btn btn-primary w-100 py-2 fw-bold">Kayıt Ol</button>
         </form>
         <div class="text-center mt-4 pt-3 border-top border-secondary">
             <p class="text-muted mb-2">Zaten hesabın var mı?</p>

@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="tr">
 <head>
@@ -174,6 +175,113 @@
 
         .card-img-top { height: 300px; object-fit: cover; }
         .nav-avatar { width: 32px; height: 32px; object-fit: cover; border-radius: 50%; border: 2px solid rgba(255,255,255,0.2); }
+
+        /* Mobile Navbar Improvements */
+        @media (max-width: 991.98px) {
+            .navbar-collapse {
+                background-color: var(--bg-card);
+                padding: 1rem;
+                border-radius: 0 0 1rem 1rem;
+                box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+                margin-top: 0.5rem;
+                border: 1px solid var(--border-color);
+            }
+            
+            .navbar-nav .nav-link {
+                padding: 0.8rem 1rem;
+                border-radius: 0.5rem;
+                transition: all 0.2s;
+            }
+            
+            .navbar-nav .nav-link:hover {
+                background-color: rgba(255,255,255,0.05);
+                padding-left: 1.5rem; /* Slide effect */
+            }
+            
+            .navbar-nav.me-auto {
+                margin-bottom: 1rem;
+                border-bottom: 1px solid var(--border-color);
+                padding-bottom: 1rem;
+            }
+            
+            /* Search form on mobile */
+            form[role="search"] {
+                width: 100%;
+                margin: 1rem 0;
+            }
+            
+            form[role="search"] .input-group {
+                width: 100% !important;
+            }
+            
+            form[role="search"] input {
+                width: auto !important;
+                flex: 1;
+            }
+
+            /* User section on mobile */
+            .user-menu-nav {
+                background-color: rgba(0,0,0,0.2);
+                border-radius: 10px;
+                padding: 15px;
+                margin-top: 10px;
+                align-items: flex-start !important;
+                flex-direction: column;
+                width: 100%;
+            }
+            
+            .user-menu-nav .nav-item {
+                width: 100%;
+                margin-right: 0 !important;
+                margin-bottom: 0.5rem;
+            }
+            
+            .user-menu-nav .nav-link {
+                display: flex;
+                align-items: center;
+                width: 100%;
+                padding: 0.5rem;
+            }
+            
+            .user-menu-nav .btn {
+                width: 100%;
+                margin-top: 0.5rem;
+            }
+
+            .nav-avatar {
+                width: 40px;
+                height: 40px;
+            }
+            
+            /* Dropdown menu fix for mobile */
+            .dropdown-menu {
+                background-color: transparent !important;
+                border: none !important;
+                box-shadow: none !important;
+                padding-left: 1rem;
+            }
+        }
+
+        /* Full Screen Background for Auth Pages */
+        .full-screen-bg {
+            background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.8)), url("{% static 'core/img/wallpaper.jpg' %}") no-repeat center center;
+            background-size: cover;
+            min-height: calc(100vh - 80px);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            width: 100vw;
+            position: relative;
+            left: 50%;
+            right: 50%;
+            margin-left: -50vw;
+            margin-right: -50vw;
+            margin-top: -1.5rem; /* Counteract container/navbar margins */
+            border-radius: 0;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -210,14 +318,14 @@
 
                 <form class="d-flex me-3" role="search" action="{% url 'search_page' %}" method="GET">
                     <div class="input-group input-group-sm">
-                        <input class="form-control border-end-0" type="search" name="q" placeholder="Ara..." aria-label="Search" style="width: 200px; background-color: #2c3440; border-color: #456; color: #fff;">
+                        <input class="form-control border-end-0" type="search" name="q" placeholder="Ara..." aria-label="Search" style="width: 200px; background-color: #2c3440; border-color: #456; color: #fff;" required>
                         <button class="btn btn-outline-secondary border-start-0" type="submit" style="background-color: #2c3440; border-color: #456; color: #9ab;">
                             <i class="fas fa-search"></i>
                         </button>
                     </div>
                 </form>
 
-                <ul class="navbar-nav align-items-center">
+                <ul class="navbar-nav align-items-center user-menu-nav">
                     {% if user.is_authenticated %}
                         <li class="nav-item dropdown me-3">
                             <a class="nav-link position-relative" href="#" id="notificationDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
